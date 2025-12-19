@@ -1,0 +1,489 @@
+openapi: 3.0.3
+info:
+  title: MALIEV Receipt Analytics API
+  description: |
+    Analytics and business metrics endpoints for receipt data.
+
+    **Key Metrics**:
+    - Payment completion rates
+    - Outstanding receivables
+    - Customer payment behavior
+    - Processing time metrics
+    - Service latency tracking
+
+    **Base URL**: `https://api.maliev.com/receipt/v1`
+
+    **Authentication**: Bearer JWT token required
+  version: 1.0.0
+
+servers:
+  - url: https://api.maliev.com/receipt/v1
+    description: Production
+  - url: http://localhost:8080/receipt/v1
+    description: Local Development
+
+tags:
+  - name: Analytics
+    description: Business metrics and payment analytics
+
+paths:
+  /analytics/payment-completion:
+    get:
+      tags:
+        - Analytics
+      summary: Get payment completion rate
+      description: |
+        Returns payment completion metrics for a specified time period.
+
+        **Calculation**: (Total receipted invoices / Total invoices) × 100
+
+        **Caching**: 5-minute Redis cache for performance
+
+        **Performance**: Target <2 seconds (SC-007)
+      operationId: getPaymentCompletionRate
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start date (inclusive)
+          schema:
+            type: string
+            format: date
+          example: "2025-01-01"
+        - name: endDate
+          in: query
+          required: true
+          description: End date (inclusive)
+          schema:
+            type: string
+            format: date
+          example: "2025-01-31"
+        - name: groupBy
+          in: query
+          description: Group results by time period
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+      responses:
+        '200':
+          description: Payment completion metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCompletionResponse'
+              example:
+                period:
+                  start: "2025-01-01"
+                  end: "2025-01-31"
+                metrics:
+                  - date: "2025-01-01"
+                    totalInvoices: 1520
+                    receiptedInvoices: 1342
+                    completionRate: 88.29
+                    averageProcessingTime: 4.2
+                cachedAt: "2025-01-15T14:30:00Z"
+        '400':
+          description: Invalid date range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analytics/outstanding-receivables:
+    get:
+      tags:
+        - Analytics
+      summary: Get outstanding receivables
+      description: |
+        Returns total outstanding receivables (invoiced amount - receipted amount).
+
+        **Includes**:
+        - Total outstanding amount
+        - Breakdown by age (0-30, 31-60, 61-90, 90+ days)
+        - Top customers by outstanding amount
+
+        **Caching**: 5-minute Redis cache
+
+        **Performance**: Target <2 seconds (SC-007)
+      operationId: getOutstandingReceivables
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: asOf
+          in: query
+          description: Calculate as of this date (defaults to now)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Outstanding receivables data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutstandingReceivablesResponse'
+              example:
+                asOfDate: "2025-01-15"
+                totalOutstanding: 2450000.00
+                currency: "THB"
+                ageBreakdown:
+                  - ageRange: "0-30 days"
+                    amount: 1200000.00
+                    count: 450
+                  - ageRange: "31-60 days"
+                    amount: 800000.00
+                    count: 120
+                  - ageRange: "61-90 days"
+                    amount: 350000.00
+                    count: 45
+                  - ageRange: "90+ days"
+                    amount: 100000.00
+                    count: 15
+                topCustomers:
+                  - customerName: "Acme Corp"
+                    outstandingAmount: 500000.00
+                    invoiceCount: 25
+                  - customerName: "Beta Industries"
+                    outstandingAmount: 350000.00
+                    invoiceCount: 18
+
+  /analytics/customer-payment-behavior:
+    get:
+      tags:
+        - Analytics
+      summary: Get customer payment behavior
+      description: |
+        Analyzes payment patterns for a specific customer or all customers.
+
+        **Metrics**:
+        - Average time to pay
+        - Partial payment frequency
+        - Void rate
+        - Payment method preferences
+
+        **Caching**: 5-minute Redis cache
+      operationId: getCustomerPaymentBehavior
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: customerId
+          in: query
+          description: Filter by specific customer (omit for all customers)
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Payment behavior metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentBehaviorResponse'
+
+  /analytics/processing-metrics:
+    get:
+      tags:
+        - Analytics
+      summary: Get processing time metrics
+      description: |
+        Returns receipt creation performance metrics.
+
+        **Metrics**:
+        - Average receipt creation time
+        - P50/P95/P99 latencies
+        - Invoice Service call latency
+        - PDF generation event publish time
+
+        **Alignment**: Validates SC-001 (5s creation), SC-004 (1s PDF publish)
+      operationId: getProcessingMetrics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Processing metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingMetricsResponse'
+              example:
+                period:
+                  start: "2025-01-01T00:00:00Z"
+                  end: "2025-01-31T23:59:59Z"
+                receiptCreation:
+                  averageDuration: 3.2
+                  p50Duration: 2.8
+                  p95Duration: 4.5
+                  p99Duration: 6.1
+                  totalCreated: 15420
+                invoiceServiceCalls:
+                  averageDuration: 1.2
+                  timeoutCount: 12
+                  retryCount: 45
+                pdfEventPublishing:
+                  averageDuration: 0.4
+                  failureCount: 3
+
+  /analytics/service-health:
+    get:
+      tags:
+        - Analytics
+      summary: Get service health metrics
+      description: |
+        Returns operational health metrics for monitoring.
+
+        **Metrics** (from FR-031):
+        - Receipt creation rate (per hour/day)
+        - Void rate
+        - Error rates by type
+        - Concurrency conflict rate
+      operationId: getServiceHealth
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: window
+          in: query
+          description: Time window for metrics
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 24h
+      responses:
+        '200':
+          description: Service health metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealthResponse'
+              example:
+                window: "24h"
+                receiptCreationRate: 642.5
+                voidRate: 1.2
+                errorRates:
+                  DUPLICATE_RECEIPT: 0.3
+                  TAX_VALIDATION_FAILED: 0.8
+                  INVOICE_SERVICE_UNAVAILABLE: 0.1
+                  CONCURRENCY_CONFLICT: 0.5
+                uptime: 99.98
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PaymentCompletionResponse:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        metrics:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              totalInvoices:
+                type: integer
+              receiptedInvoices:
+                type: integer
+              completionRate:
+                type: number
+                format: float
+                description: Percentage (0-100)
+              averageProcessingTime:
+                type: number
+                format: float
+                description: Seconds
+        cachedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    OutstandingReceivablesResponse:
+      type: object
+      properties:
+        asOfDate:
+          type: string
+          format: date
+        totalOutstanding:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        ageBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              ageRange:
+                type: string
+              amount:
+                type: number
+                format: decimal
+              count:
+                type: integer
+        topCustomers:
+          type: array
+          items:
+            type: object
+            properties:
+              customerName:
+                type: string
+              outstandingAmount:
+                type: number
+                format: decimal
+              invoiceCount:
+                type: integer
+
+    PaymentBehaviorResponse:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          nullable: true
+        averageTimeToPayDays:
+          type: number
+          format: float
+        partialPaymentFrequency:
+          type: number
+          format: float
+          description: Percentage (0-100)
+        voidRate:
+          type: number
+          format: float
+          description: Percentage (0-100)
+        paymentMethods:
+          type: array
+          items:
+            type: object
+            properties:
+              method:
+                type: string
+              count:
+                type: integer
+              percentage:
+                type: number
+                format: float
+
+    ProcessingMetricsResponse:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        receiptCreation:
+          type: object
+          properties:
+            averageDuration:
+              type: number
+              format: float
+              description: Seconds
+            p50Duration:
+              type: number
+              format: float
+            p95Duration:
+              type: number
+              format: float
+            p99Duration:
+              type: number
+              format: float
+            totalCreated:
+              type: integer
+        invoiceServiceCalls:
+          type: object
+          properties:
+            averageDuration:
+              type: number
+              format: float
+            timeoutCount:
+              type: integer
+            retryCount:
+              type: integer
+        pdfEventPublishing:
+          type: object
+          properties:
+            averageDuration:
+              type: number
+              format: float
+            failureCount:
+              type: integer
+
+    ServiceHealthResponse:
+      type: object
+      properties:
+        window:
+          type: string
+        receiptCreationRate:
+          type: number
+          format: float
+          description: Receipts per hour
+        voidRate:
+          type: number
+          format: float
+          description: Percentage
+        errorRates:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+        uptime:
+          type: number
+          format: float
+          description: Percentage
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - message
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
