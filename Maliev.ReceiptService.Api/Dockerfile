@@ -1,55 +1,59 @@
-# Task: T109 [P] Create Dockerfile with multi-stage build, BuildKit secrets, app user, health check
-# Per Constitution X and Maliev guidelines Section 3
+# syntax=docker/dockerfile:1.4
+# Multi-stage build for Receipt Service
 
-# syntax=docker/dockerfile:1
+# Base stage for runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy solution and project files
 COPY ["Maliev.ReceiptService.sln", "./"]
 COPY ["Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj", "Maliev.ReceiptService.Api/"]
-COPY ["nuget.config", "./"]
+COPY ["Maliev.ReceiptService.Data/Maliev.ReceiptService.Data.csproj", "Maliev.ReceiptService.Data/"]
+COPY ["nuget.config", "."]
 
-# Restore dependencies using BuildKit secrets for NuGet authentication
+# Restore dependencies with BuildKit secrets
 RUN --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
-    export NUGET_USERNAME=$(cat /run/secrets/nuget_username) && \
-    export NUGET_PASSWORD=$(cat /run/secrets/nuget_password) && \
-    dotnet restore "ReceiptService.Api/ReceiptService.Api.csproj"
+    NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
+    NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
+    dotnet restore "Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj"
 
-# Copy source code
-COPY ["Maliev.ReceiptService.Api/", "Maliev.ReceiptService.Api/"]
+# Copy remaining source code
+COPY . .
+WORKDIR "/src/Maliev.ReceiptService.Api"
+RUN dotnet build "Maliev.ReceiptService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Build and publish
-WORKDIR "/Maliev.ReceiptService.Api"
-RUN dotnet publish "Maliev.ReceiptService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
+# Publish stage
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "Maliev.ReceiptService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Final stage
+FROM base AS final
 WORKDIR /app
 
-# Create non-root user per Constitution X
-RUN groupadd -r app && useradd -r -g app app
-
-# Copy published application
-COPY --from=build /app/publish .
-
-# Set ownership to app user
+# Ensure 'app' owns the workdir (app user already exists in ASP.NET runtime image)
 RUN chown -R app:app /app
 
 # Switch to non-root user
 USER app
 
-# Expose port (default ASP.NET Core port)
-EXPOSE 8080
+# Copy published application
+COPY --from=publish /app/publish .
 
-# Health check per Constitution X
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/receipt/health || exit 1
-
-# Environment variables
+# Set environment variables
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Entry point
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/receipt/health || exit 1
+
 ENTRYPOINT ["dotnet", "Maliev.ReceiptService.Api.dll"]
