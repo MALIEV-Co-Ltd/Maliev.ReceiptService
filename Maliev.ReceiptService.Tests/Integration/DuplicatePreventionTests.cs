@@ -9,24 +9,10 @@ namespace Maliev.ReceiptService.Tests.Integration;
 /// Integration tests for duplicate receipt prevention and over-receipting protection
 /// Tests balance tracking and concurrency control per research.md Decision 4
 /// </summary>
-[Collection("IntegrationTests")]
-public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class DuplicatePreventionTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
-
-    public DuplicatePreventionTests(TestWebApplicationFactory factory)
+    public DuplicatePreventionTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     [Fact]
@@ -41,7 +27,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Bank Transfer"
         };
 
-        var firstResponse = await _client.PostAsJsonAsync("/v1/receipts", firstRequest);
+        var firstResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", firstRequest);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
         // Act - Try to create second receipt for same invoice
@@ -52,7 +38,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Cash"
         };
 
-        var secondResponse = await _client.PostAsJsonAsync("/v1/receipts", secondRequest);
+        var secondResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", secondRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
@@ -77,7 +63,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Cash"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", firstRequest);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", firstRequest);
 
         // Act - Try to create receipt for more than remaining balance
         var secondRequest = new
@@ -87,7 +73,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Bank Transfer"
         };
 
-        var response = await _client.PostAsJsonAsync("/v1/receipts", secondRequest);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", secondRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -122,7 +108,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
                 paymentMethod = "Bank Transfer"
             };
 
-            tasks.Add(_client.PostAsJsonAsync("/v1/receipts", request));
+            tasks.Add(Client.PostAsJsonAsync("/receipt/v1/receipts", request));
         }
 
         var responses = await Task.WhenAll(tasks);
@@ -202,8 +188,8 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Send requests concurrently
-        var task1 = _client.PostAsJsonAsync("/v1/receipts", request1);
-        var task2 = _client.PostAsJsonAsync("/v1/receipts", request2);
+        var task1 = Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
+        var task2 = Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         var responses = await Task.WhenAll(task1, task2);
 
@@ -236,7 +222,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
@@ -247,7 +233,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             reason = "Payment reversed"
         };
 
-        await _client.PostAsJsonAsync($"/v1/receipts/{receiptId}/void", voidRequest);
+        await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receiptId}/void", voidRequest);
 
         // Act - Try to create new receipt for same invoice
         var newReceiptRequest = new
@@ -257,7 +243,7 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Cash"
         };
 
-        var newReceiptResponse = await _client.PostAsJsonAsync("/v1/receipts", newReceiptRequest);
+        var newReceiptResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", newReceiptRequest);
 
         // Assert - Should succeed because balance was restored
         Assert.Equal(HttpStatusCode.Created, newReceiptResponse.StatusCode);
@@ -355,6 +341,6 @@ public class DuplicatePreventionTests : IClassFixture<TestWebApplicationFactory>
             paymentMethod = "Bank Transfer"
         };
 
-        return await _client.PostAsJsonAsync("/v1/receipts", request);
+        return await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
     }
 }

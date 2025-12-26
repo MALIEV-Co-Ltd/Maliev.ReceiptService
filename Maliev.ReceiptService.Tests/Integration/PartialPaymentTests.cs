@@ -7,23 +7,11 @@ using Xunit;
 namespace Maliev.ReceiptService.Tests.Integration;
 
 [Collection("IntegrationTests")]
-public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class PartialPaymentTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
 
-    public PartialPaymentTests(TestWebApplicationFactory factory)
+    public PartialPaymentTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     [Fact]
@@ -39,7 +27,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -71,7 +59,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 500.00m,
             PaymentMethod = "Bank Transfer"
         };
-        var response1 = await _client.PostAsJsonAsync("/v1/receipts", request1);
+        var response1 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
         Assert.Equal(HttpStatusCode.Created, response1.StatusCode);
 
         // Act - Create second partial payment (300.00)
@@ -81,7 +69,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 300.00m,
             PaymentMethod = "Credit Card"
         };
-        var response2 = await _client.PostAsJsonAsync("/v1/receipts", request2);
+        var response2 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
         Assert.Equal(HttpStatusCode.Created, response2.StatusCode);
 
         // Act - Create third partial payment (270.00) - should complete the invoice
@@ -91,11 +79,11 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 270.00m,
             PaymentMethod = "Cash"
         };
-        var response3 = await _client.PostAsJsonAsync("/v1/receipts", request3);
+        var response3 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request3);
         Assert.Equal(HttpStatusCode.Created, response3.StatusCode);
 
         // Assert - Verify all three receipts were created
-        var queryResponse = await _client.GetAsync($"/v1/receipts?invoiceId={invoiceId}");
+        var queryResponse = await Client.GetAsync($"/receipt/v1/receipts?invoiceId={invoiceId}");
         Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
 
         var queryContent = await queryResponse.Content.ReadAsStringAsync();
@@ -128,7 +116,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 800.00m,
             PaymentMethod = "Bank Transfer"
         };
-        var response1 = await _client.PostAsJsonAsync("/v1/receipts", request1);
+        var response1 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
         Assert.Equal(HttpStatusCode.Created, response1.StatusCode);
 
         // Act - Attempt to create second payment that would exceed invoice total (500.00)
@@ -139,7 +127,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 500.00m,
             PaymentMethod = "Credit Card"
         };
-        var response2 = await _client.PostAsJsonAsync("/v1/receipts", request2);
+        var response2 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Assert - Should return 409 Conflict
         Assert.Equal(HttpStatusCode.Conflict, response2.StatusCode);
@@ -161,7 +149,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 800.00m,
             PaymentMethod = "Bank Transfer"
         };
-        await _client.PostAsJsonAsync("/v1/receipts", request1);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
 
         // Act - Create second payment for exact remaining balance (270.00)
         var request2 = new CreateReceiptRequest
@@ -170,7 +158,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 270.00m,
             PaymentMethod = "Cash"
         };
-        var response2 = await _client.PostAsJsonAsync("/v1/receipts", request2);
+        var response2 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Assert - Should succeed
         Assert.Equal(HttpStatusCode.Created, response2.StatusCode);
@@ -189,7 +177,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 500.00m,
             PaymentMethod = "Bank Transfer"
         };
-        await _client.PostAsJsonAsync("/v1/receipts", request1);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
 
         // Act - Attempt to create full payment receipt (this should fail)
         var request2 = new CreateReceiptRequest
@@ -198,7 +186,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 1070.00m, // Full invoice amount
             PaymentMethod = "Bank Transfer"
         };
-        var response2 = await _client.PostAsJsonAsync("/v1/receipts", request2);
+        var response2 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Assert - Should return 409 Conflict
         Assert.Equal(HttpStatusCode.Conflict, response2.StatusCode);
@@ -217,7 +205,7 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             Amount = 400.00m,
             PaymentMethod = "Bank Transfer"
         };
-        await _client.PostAsJsonAsync("/v1/receipts", setupRequest);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", setupRequest);
 
         // Act - Attempt two concurrent requests that together would exceed remaining balance
         // Remaining: 670.00
@@ -234,8 +222,8 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
             PaymentMethod = "Credit Card"
         };
 
-        var task1 = _client.PostAsJsonAsync("/v1/receipts", request1);
-        var task2 = _client.PostAsJsonAsync("/v1/receipts", request2);
+        var task1 = Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
+        var task2 = Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         var responses = await Task.WhenAll(task1, task2);
 
@@ -245,3 +233,4 @@ public class PartialPaymentTests : IClassFixture<TestWebApplicationFactory>, IAs
         Assert.Contains(HttpStatusCode.Conflict, statusCodes);
     }
 }
+

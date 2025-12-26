@@ -21,7 +21,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
     public PdfGenerationEventTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthenticatedClientWithAllPermissions();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -47,7 +47,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -86,7 +86,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
@@ -122,7 +122,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
@@ -159,7 +159,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
@@ -196,7 +196,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
@@ -226,7 +226,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
@@ -317,7 +317,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
 
         // Act
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Wait for the event to be published (MassTransit's Any() method doesn't have a timeout parameter)
         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -347,7 +347,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
@@ -378,7 +378,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -407,7 +407,7 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Get correlation ID from response header
         var correlationIdHeader = response.Headers.GetValues("X-Correlation-Id").FirstOrDefault();
@@ -423,3 +423,4 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         await harness.Stop();
     }
 }
+

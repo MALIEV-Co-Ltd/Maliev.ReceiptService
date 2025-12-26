@@ -7,23 +7,11 @@ using Xunit;
 namespace Maliev.ReceiptService.Tests.Integration;
 
 [Collection("IntegrationTests")]
-public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class SplitInvoiceReceiptTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
 
-    public SplitInvoiceReceiptTests(TestWebApplicationFactory factory)
+    public SplitInvoiceReceiptTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     // T074: Integration test for split invoice receipt generation
@@ -43,7 +31,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -91,8 +79,8 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
             PaymentMethod = "Bank Transfer"
         };
 
-        var response1 = await _client.PostAsJsonAsync("/v1/receipts", request1);
-        var response2 = await _client.PostAsJsonAsync("/v1/receipts", request2);
+        var response1 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
+        var response2 = await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Assert - Both should succeed independently
         Assert.Equal(HttpStatusCode.Created, response1.StatusCode);
@@ -125,7 +113,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -160,7 +148,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -196,10 +184,10 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
             PaymentMethod = "Credit Card"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request1);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
 
         // Act - Query receipts for this invoice
-        var queryResponse = await _client.GetAsync($"/v1/receipts?invoiceId={invoiceId}");
+        var queryResponse = await Client.GetAsync($"/receipt/v1/receipts?invoiceId={invoiceId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
@@ -247,11 +235,11 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
             PaymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request1);
-        await _client.PostAsJsonAsync("/v1/receipts", request2);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", request1);
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Act - Query receipts for specific segment
-        var queryResponse = await _client.GetAsync($"/v1/receipts?segmentId={segment1Id}");
+        var queryResponse = await Client.GetAsync($"/receipt/v1/receipts?segmentId={segment1Id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
@@ -283,7 +271,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         var segment3Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
         // Create receipts for segments 1 and 2
-        await _client.PostAsJsonAsync("/v1/receipts", new CreateReceiptRequest
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", new CreateReceiptRequest
         {
             InvoiceId = invoiceId,
             InvoiceSegmentId = segment1Id,
@@ -291,7 +279,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
             PaymentMethod = "Credit Card"
         });
 
-        await _client.PostAsJsonAsync("/v1/receipts", new CreateReceiptRequest
+        await Client.PostAsJsonAsync("/receipt/v1/receipts", new CreateReceiptRequest
         {
             InvoiceId = invoiceId,
             InvoiceSegmentId = segment2Id,
@@ -300,7 +288,7 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         });
 
         // Act - Query all receipts for this invoice
-        var queryResponse = await _client.GetAsync($"/v1/receipts?invoiceId={invoiceId}");
+        var queryResponse = await Client.GetAsync($"/receipt/v1/receipts?invoiceId={invoiceId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
@@ -326,3 +314,4 @@ public class SplitInvoiceReceiptTests : IClassFixture<TestWebApplicationFactory>
         Assert.DoesNotContain(segment3Id.ToString(), segmentIds); // Segment 3 is outstanding
     }
 }
+

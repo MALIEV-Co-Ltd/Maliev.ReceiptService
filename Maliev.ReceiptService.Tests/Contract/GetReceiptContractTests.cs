@@ -14,7 +14,7 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
     public GetReceiptContractTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthenticatedClientWithAllPermissions();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -36,13 +36,13 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
             paymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -119,7 +119,7 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{nonExistentId}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{nonExistentId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -136,7 +136,7 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
     public async Task GetReceiptById_WithInvalidGuidFormat_Returns400()
     {
         // Act
-        var response = await _client.GetAsync("/v1/receipts/invalid-guid");
+        var response = await _client.GetAsync("/receipt/v1/receipts/invalid-guid");
 
         // Assert - Route constraint {id:guid} fails before reaching controller, returns 404
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -153,13 +153,13 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
             paymentMethod = "Credit Card"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -204,7 +204,7 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
             paymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
@@ -215,10 +215,10 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
             reason = "Customer requested refund"
         };
 
-        await _client.PostAsJsonAsync($"/v1/receipts/{receiptId}/void", voidRequest);
+        await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receiptId}/void", voidRequest);
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -251,16 +251,16 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
             paymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Act - Fetch the same receipt twice
-        var response1 = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var response1 = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}");
         var content1 = await response1.Content.ReadAsStringAsync();
 
-        var response2 = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var response2 = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}");
         var content2 = await response2.Content.ReadAsStringAsync();
 
         // Assert - Both responses should be identical (receipts are immutable)
@@ -286,3 +286,4 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
         );
     }
 }
+
