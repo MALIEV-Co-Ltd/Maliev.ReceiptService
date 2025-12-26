@@ -123,7 +123,7 @@ public class AnalyticsService : IAnalyticsService
         // Note: Real outstanding by customer requires joining Invoices which we don't own.
         // Using Receipt history to estimate top customers by volume.
         var asOfDateTime = asOf.ToDateTime(TimeOnly.MaxValue);
-        
+
         var topCustomers = await _context.Receipts
             .Where(r => r.IssueDate <= asOfDateTime && r.Status != ReceiptStatus.Void)
             .GroupBy(r => r.CustomerName)

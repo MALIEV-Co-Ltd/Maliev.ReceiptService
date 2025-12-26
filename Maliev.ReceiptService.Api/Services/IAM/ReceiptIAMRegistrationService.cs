@@ -11,7 +11,7 @@ public class ReceiptIAMRegistrationService : IAMRegistrationService
     public ReceiptIAMRegistrationService(
         IHttpClientFactory httpClientFactory,
         ILogger<ReceiptIAMRegistrationService> logger,
-        IConfiguration configuration) 
+        IConfiguration configuration)
         : base(httpClientFactory, logger, "receipt")
     {
         _configuration = configuration;

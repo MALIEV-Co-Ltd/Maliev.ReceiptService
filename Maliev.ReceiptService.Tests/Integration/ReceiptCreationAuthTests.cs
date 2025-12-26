@@ -20,9 +20,9 @@ public class ReceiptCreationAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task CreateReceipt_WithCreatorPermission_ShouldSucceed()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-creator", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Receipts.Create 
+        var token = _factory.CreateTestJwtToken("user-creator", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Receipts.Create
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -49,9 +49,9 @@ public class ReceiptCreationAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task CreateReceipt_WithoutPermission_ShouldFail()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-viewer", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Receipts.Read 
+        var token = _factory.CreateTestJwtToken("user-viewer", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Receipts.Read
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);

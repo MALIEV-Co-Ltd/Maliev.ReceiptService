@@ -19,9 +19,9 @@ public class AuditAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task GetAuditHistory_WithAuditorPermission_ShouldSucceed()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-auditor", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Audit.Read 
+        var token = _factory.CreateTestJwtToken("user-auditor", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Audit.Read
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -41,9 +41,9 @@ public class AuditAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task GetAuditHistory_WithoutPermission_ShouldFail()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-viewer", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Receipts.Read 
+        var token = _factory.CreateTestJwtToken("user-viewer", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Receipts.Read
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);

@@ -19,7 +19,7 @@ public class AuthMetrics : IAuthMetrics
         var serviceName = configuration["Service:Name"] ?? "ReceiptService";
         var meterName = "receipts-auth-meter";
         var meter = meterFactory.Create(meterName);
-        
+
         _authSuccessCounter = meter.CreateCounter<long>("receipt_auth_success_total", description: "Total successful authorizations");
         _authFailureCounter = meter.CreateCounter<long>("receipt_auth_failure_total", description: "Total failed authorizations");
 
