@@ -51,3 +51,11 @@ Thumbs.db
 ## Rider
 _ReSharperCache/
 *.DotSettings.user
+
+.claude/settings.local.json
+.gemini/settings.local.json
+
+# Test Outputs
+*test-output.txt
+*_error.txt
+
