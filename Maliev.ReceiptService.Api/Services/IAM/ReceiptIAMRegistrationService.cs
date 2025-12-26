@@ -22,23 +22,29 @@ public class ReceiptIAMRegistrationService : IAMRegistrationService
     {
         return new[]
         {
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Create, Description = "Create new receipts" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Read, Description = "Read receipt details" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Update, Description = "Update receipt information" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Void, Description = "Void receipts" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Query, Description = "Query receipt history" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Export, Description = "Export receipt data" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Create, Description = "Create partial payment records" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Read, Description = "Read partial payment details" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Manage, Description = "Update/Delete partial payments" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Audit.Read, Description = "Read receipt audit logs" },
-            new PermissionRegistration { PermissionId = ReceiptPermissions.Audit.Export, Description = "Export audit data" }
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Create.Replace("Permission:", ""), Description = "Create new receipts" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Read.Replace("Permission:", ""), Description = "Read receipt details" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Update.Replace("Permission:", ""), Description = "Update receipt information" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Void.Replace("Permission:", ""), Description = "Void receipts" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Query.Replace("Permission:", ""), Description = "Query receipt history" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Receipts.Export.Replace("Permission:", ""), Description = "Export receipt data" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Create.Replace("Permission:", ""), Description = "Create partial payment records" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Read.Replace("Permission:", ""), Description = "Read partial payment details" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.PartialPayments.Manage.Replace("Permission:", ""), Description = "Update/Delete partial payments" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Audit.Read.Replace("Permission:", ""), Description = "Read receipt audit logs" },
+            new PermissionRegistration { PermissionId = ReceiptPermissions.Audit.Export.Replace("Permission:", ""), Description = "Export audit data" }
         };
     }
 
     protected override IEnumerable<RoleRegistration> GetPredefinedRoles()
     {
-        return ReceiptPredefinedRoles.GetRoles();
+        return ReceiptPredefinedRoles.GetRoles().Select(r => new RoleRegistration
+        {
+            RoleId = r.RoleId,
+            Description = r.Description,
+            PermissionIds = r.PermissionIds.Select(p => p.Replace("Permission:", "")).ToList(),
+            IsCustom = r.IsCustom
+        });
     }
 
     public async Task RegisterWithCheckAsync(CancellationToken cancellationToken)
