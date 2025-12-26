@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using Maliev.ReceiptService.Api.Services;
+using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.ReceiptService.Api.Services.IAM;
 
 namespace Maliev.ReceiptService.Api.Controllers;
 
@@ -10,8 +12,9 @@ namespace Maliev.ReceiptService.Api.Controllers;
 /// Per contracts/analytics-api.yaml
 /// </summary>
 [ApiController]
-[Route("receipt/v1/analytics")]
-[Authorize]
+[ApiVersion("1.0")]
+[Route("receipt/v{version:apiVersion}/analytics")]
+[RequirePermission(ReceiptPermissions.Receipts.Query)] // Base permission for analytics? Or Audit?
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
@@ -31,6 +34,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T097 [P] [US5]
     /// </summary>
     [HttpGet("payment-completion")]
+    [RequirePermission(ReceiptPermissions.Audit.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPaymentCompletionRate(
@@ -71,6 +75,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T098 [P] [US5]
     /// </summary>
     [HttpGet("outstanding-receivables")]
+    [RequirePermission(ReceiptPermissions.Audit.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetOutstandingReceivables(
         [FromQuery] DateOnly? asOf = null)
@@ -87,6 +92,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T099 [P] [US5]
     /// </summary>
     [HttpGet("customer-payment-behavior")]
+    [RequirePermission(ReceiptPermissions.Audit.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetCustomerPaymentBehavior(
@@ -117,6 +123,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T100 [P] [US5]
     /// </summary>
     [HttpGet("processing-metrics")]
+    [RequirePermission(ReceiptPermissions.Audit.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetProcessingMetrics(

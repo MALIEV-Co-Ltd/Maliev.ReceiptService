@@ -403,18 +403,21 @@ public class ReceiptService : IReceiptService
         var balanceTracker = await _context.InvoiceBalanceTrackers
             .FirstOrDefaultAsync(t => t.InvoiceId == receipt.InvoiceId && t.SegmentId == segmentIdValue);
 
-        if (balanceTracker != null)
+        if (balanceTracker == null)
         {
-            balanceTracker.TotalReceiptedAmount -= receipt.TotalAmount;
-            balanceTracker.RemainingBalance += receipt.TotalAmount;
-            balanceTracker.LastUpdatedAt = DateTime.UtcNow;
+            // Critical data integrity issue: Receipt exists but tracker is missing
+            throw new InvalidOperationException($"Balance tracker missing for invoice {receipt.InvoiceId}, cannot restore balance.");
+        }
 
-            if (receipt.InvoiceSegmentId.HasValue)
-            {
-                _logger.LogInformation(
-                    "Restored balance for segment {SegmentId}: +{Amount}, new balance: {Balance}",
-                    receipt.InvoiceSegmentId.Value, receipt.TotalAmount, balanceTracker.RemainingBalance);
-            }
+        balanceTracker.TotalReceiptedAmount -= receipt.TotalAmount;
+        balanceTracker.RemainingBalance += receipt.TotalAmount;
+        balanceTracker.LastUpdatedAt = DateTime.UtcNow;
+
+        if (receipt.InvoiceSegmentId.HasValue)
+        {
+            _logger.LogInformation(
+                "Restored balance for segment {SegmentId}: +{Amount}, new balance: {Balance}",
+                receipt.InvoiceSegmentId.Value, receipt.TotalAmount, balanceTracker.RemainingBalance);
         }
 
         // Step 5: Create audit event for void operation

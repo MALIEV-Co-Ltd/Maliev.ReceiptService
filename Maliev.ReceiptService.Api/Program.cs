@@ -1,5 +1,6 @@
 using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Data.Data;
+using Maliev.Aspire.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,10 +9,18 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddServiceMeters("receipts-meter"); // Register service meters for OpenTelemetry business metrics
+builder.AddStandardMiddleware(options =>
+{
+    options.EnableRequestLogging = true;
+});
+builder.AddServiceMeters("receipts-meter", "receipts-auth-meter"); // Register service meters for OpenTelemetry business metrics
+
+builder.Services.AddSingleton<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>();
+builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp => 
+    sp.GetRequiredService<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>());
 
 // Database Context with ServiceDefaults (skip in Testing environment - handled by test factory)
-builder.AddPostgresDbContext<ReceiptDbContext>(connectionStringName: "ReceiptDbContext");
+builder.AddPostgresDbContext<ReceiptDbContext>(connectionName: "ReceiptDbContext");
 
 builder.AddRedisDistributedCache(instanceName: "receipt:"); // Redis with in-memory fallback
 
@@ -28,21 +37,14 @@ builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 
 // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
 builder.AddJwtAuthentication();
+builder.Services.AddPermissionAuthorization();
 
 // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
 if (!builder.Environment.IsProduction())
 {
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi("v1", options =>
-    {
-        options.AddDocumentTransformer((document, context, cancellationToken) =>
-        {
-            document.Info.Title = "MALIEV Receipt Service API";
-            document.Info.Version = "v1";
-            document.Info.Description = "Receipt management service. Handles receipt creation from invoices, PDF generation, tax validation, balance tracking, partial payments, voiding, and audit trail tracking.";
-            return Task.CompletedTask;
-        });
-    });
+    builder.AddStandardOpenApi(
+        title: "MALIEV Receipt Service API",
+        description: "Receipt management service. Handles receipt creation from invoices, PDF generation, tax validation, balance tracking, partial payments, voiding, and audit trail tracking.");
 }
 
 builder.Services.AddControllers();
@@ -60,13 +62,12 @@ builder.Services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
 builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.ReceiptService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
+// IAM Integration
+builder.Services.AddIAMClient(builder.Configuration, "ReceiptService");
+builder.Services.AddIAMRegistration<Maliev.ReceiptService.Api.Services.IAM.ReceiptIAMRegistrationService>();
+
 // External Service Clients with Polly v8 Resilience
-builder.Services.AddHttpClient<IInvoiceServiceClient, InvoiceServiceClient>(client =>
-{
-    var baseUrl = builder.Configuration["InvoiceService:BaseUrl"] ?? "http://localhost:8081";
-    client.BaseAddress = new Uri(baseUrl);
-})
-    .AddStandardResilienceHandler();
+builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceService");
 
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -86,7 +87,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 }
 
 // Middleware Pipeline
-app.UseMiddleware<Maliev.ReceiptService.Api.Middleware.CorrelationIdMiddleware>();
+app.UseStandardMiddleware();
 app.UseHttpsRedirection();
 app.UseCors();
 
