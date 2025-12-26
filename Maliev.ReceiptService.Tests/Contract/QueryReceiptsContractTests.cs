@@ -15,7 +15,7 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
     public QueryReceiptsContractTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthenticatedClientWithAllPermissions();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -44,11 +44,11 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
             PaymentMethod = "Credit Card"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request1);
-        await _client.PostAsJsonAsync("/v1/receipts", request2);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request1);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request2);
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts?invoiceId={invoiceId}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts?invoiceId={invoiceId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -90,10 +90,10 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
             PaymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Act
-        var response = await _client.GetAsync("/v1/receipts?status=Active");
+        var response = await _client.GetAsync("/receipt/v1/receipts?status=Active");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -123,12 +123,12 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
             PaymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Act - Query with date range covering today
         var fromDate = DateTime.UtcNow.Date.AddDays(-1).ToString("yyyy-MM-dd");
         var toDate = DateTime.UtcNow.Date.AddDays(1).ToString("yyyy-MM-dd");
-        var response = await _client.GetAsync($"/v1/receipts?fromDate={fromDate}&toDate={toDate}");
+        var response = await _client.GetAsync($"/receipt/v1/receipts?fromDate={fromDate}&toDate={toDate}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -163,13 +163,13 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
             PaymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Act - Query with multiple filters
         var fromDate = DateTime.UtcNow.Date.AddDays(-1).ToString("yyyy-MM-dd");
         var toDate = DateTime.UtcNow.Date.AddDays(1).ToString("yyyy-MM-dd");
         var response = await _client.GetAsync(
-            $"/v1/receipts?invoiceId={invoiceId}&status=PendingPdf&fromDate={fromDate}&toDate={toDate}");
+            $"/receipt/v1/receipts?invoiceId={invoiceId}&status=PendingPdf&fromDate={fromDate}&toDate={toDate}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -204,10 +204,10 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
             PaymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", request);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Act
-        var response = await _client.GetAsync("/v1/receipts");
+        var response = await _client.GetAsync("/receipt/v1/receipts");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -225,7 +225,7 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
     public async Task GetReceipts_InvalidDateFormat_ReturnsBadRequest()
     {
         // Act
-        var response = await _client.GetAsync("/v1/receipts?fromDate=invalid-date");
+        var response = await _client.GetAsync("/receipt/v1/receipts?fromDate=invalid-date");
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -235,7 +235,7 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
     public async Task GetReceipts_NonExistentInvoiceId_ReturnsEmptyArray()
     {
         // Act
-        var response = await _client.GetAsync("/v1/receipts?invoiceId=00000000-0000-0000-0000-000000000000");
+        var response = await _client.GetAsync("/receipt/v1/receipts?invoiceId=00000000-0000-0000-0000-000000000000");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -249,3 +249,4 @@ public class QueryReceiptsContractTests : IClassFixture<TestWebApplicationFactor
         Assert.Equal(0, dataArray.GetArrayLength());
     }
 }
+

@@ -14,7 +14,20 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
     public CreateReceiptContractTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
+        // Create authenticated client with all receipt permissions
+        var token = factory.CreateTestJwtToken(
+            userId: "test-user",
+            roles: new[] { "admin" },
+            permissions: new[]
+            {
+                "receipt.receipts.create",
+                "receipt.receipts.read",
+                "receipt.receipts.update",
+                "receipt.receipts.void",
+                "receipt.receipts.query"
+            });
         _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -39,7 +52,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -95,7 +108,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -113,7 +126,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -138,7 +151,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert - Invoice not found returns 404
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -156,7 +169,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -181,7 +194,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -206,7 +219,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
             paymentMethod = "Bank Transfer"
         };
 
-        await _client.PostAsJsonAsync("/v1/receipts", firstRequest);
+        await _client.PostAsJsonAsync("/receipt/v1/receipts", firstRequest);
 
         // Act - Try to create another receipt for same invoice
         var secondRequest = new
@@ -216,7 +229,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
             paymentMethod = "Cash"
         };
 
-        var response = await _client.PostAsJsonAsync("/v1/receipts", secondRequest);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", secondRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -241,7 +254,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -266,7 +279,7 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -289,3 +302,4 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         Assert.True(firstLine.TryGetProperty("lineTotal", out _));
     }
 }
+

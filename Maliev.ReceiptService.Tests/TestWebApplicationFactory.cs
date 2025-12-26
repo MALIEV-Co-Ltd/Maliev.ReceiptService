@@ -34,6 +34,18 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
     {
         base.ConfigureAdditionalServices(services);
 
+        // Add permission-based authorization infrastructure for tests
+        services.AddHttpContextAccessor();
+#pragma warning disable ASPDEPR006
+        services.AddSingleton<Microsoft.AspNetCore.Mvc.Infrastructure.IActionContextAccessor,
+                              Microsoft.AspNetCore.Mvc.Infrastructure.ActionContextAccessor>();
+#pragma warning restore ASPDEPR006
+        services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
+                              Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationPolicyProvider>();
+        services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+                           Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationHandler>();
+        services.AddAuthorizationBuilder();
+
         // MassTransit test harness works alongside the existing RabbitMQ configuration
         // When started, it intercepts all Publish/Send calls for testing
         services.AddMassTransitTestHarness();
@@ -1000,6 +1012,33 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
                         }
                     }
                 })));
+    }
+
+    /// <summary>
+    /// Creates an authenticated HTTP client with all receipt permissions for testing.
+    /// This is a convenience method for tests that need full access to receipt operations.
+    /// </summary>
+    public HttpClient CreateAuthenticatedClientWithAllPermissions(string userId = "test-user")
+    {
+        var allPermissions = new[]
+        {
+            "receipt.receipts.create",
+            "receipt.receipts.read",
+            "receipt.receipts.update",
+            "receipt.receipts.void",
+            "receipt.receipts.query",
+            "receipt.receipts.export",
+            "receipt.partial-payments.create",
+            "receipt.partial-payments.read",
+            "receipt.partial-payments.manage",
+            "receipt.audit.read",
+            "receipt.audit.export"
+        };
+
+        var token = CreateTestJwtToken(userId, roles: null, permissions: allPermissions);
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+        return client;
     }
 
     protected override void Dispose(bool disposing)

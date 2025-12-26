@@ -52,24 +52,18 @@ public class AnalyticsService : IAnalyticsService
         var startDateTime = startDate.ToDateTime(TimeOnly.MinValue);
         var endDateTime = endDate.ToDateTime(TimeOnly.MaxValue);
 
-        var receipts = await _context.Receipts
+        // Perform aggregation in database
+        var receiptedInvoicesCount = await _context.Receipts
             .Where(r => r.IssueDate >= startDateTime && r.IssueDate <= endDateTime)
             .Where(r => r.Status != ReceiptStatus.Void)
-            .Select(r => new
-            {
-                r.InvoiceId,
-                r.IssueDate,
-                r.CreatedAt
-            })
-            .ToListAsync();
+            .Select(r => r.InvoiceId)
+            .Distinct()
+            .CountAsync();
 
-        // Get unique invoice IDs
-        var invoiceIds = receipts.Select(r => r.InvoiceId).Distinct().ToList();
-
-        // Calculate metrics (simplified - in production would use invoice data)
-        var totalInvoices = invoiceIds.Count > 0 ? invoiceIds.Count : 1;
-        var receiptedInvoices = invoiceIds.Count;
-        var completionRate = (decimal)receiptedInvoices / totalInvoices * 100;
+        // Estimate total invoices (simplified - ideally this comes from Invoice Service stats)
+        // For the purpose of this calculation within Receipt Service context
+        var totalInvoices = receiptedInvoicesCount > 0 ? receiptedInvoicesCount : 1;
+        var completionRate = 100m; // Default to 100% since we only know about receipted ones here
 
         var response = new PaymentCompletionResponse
         {
@@ -84,8 +78,8 @@ public class AnalyticsService : IAnalyticsService
                 {
                     Date = startDate,
                     TotalInvoices = totalInvoices,
-                    ReceiptedInvoices = receiptedInvoices,
-                    CompletionRate = Math.Round(completionRate, 2),
+                    ReceiptedInvoices = receiptedInvoicesCount,
+                    CompletionRate = completionRate,
                     AverageProcessingTime = 3.5m // Would calculate from actual data
                 }
             },
@@ -100,10 +94,6 @@ public class AnalyticsService : IAnalyticsService
             {
                 AbsoluteExpirationRelativeToNow = CacheDuration
             });
-
-        _logger.LogInformation(
-            "Payment completion rate calculated: {CompletionRate}%, cached for 5 minutes",
-            completionRate);
 
         return response;
     }
@@ -125,68 +115,36 @@ public class AnalyticsService : IAnalyticsService
         _logger.LogInformation("Calculating outstanding receivables as of {AsOfDate}", asOf);
 
         // Query balance trackers
-        var trackers = await _context.InvoiceBalanceTrackers
+        var totalOutstanding = await _context.InvoiceBalanceTrackers
             .Where(t => t.RemainingBalance > 0)
-            .ToListAsync();
+            .SumAsync(t => t.RemainingBalance);
 
-        var totalOutstanding = trackers.Sum(t => t.RemainingBalance);
-
-        // Get receipts for age calculation
+        // Top customers by outstanding (calculated via Receipts as proxy for customer data)
+        // Note: Real outstanding by customer requires joining Invoices which we don't own.
+        // Using Receipt history to estimate top customers by volume.
         var asOfDateTime = asOf.ToDateTime(TimeOnly.MaxValue);
-        var receipts = await _context.Receipts
-            .Where(r => r.IssueDate <= asOfDateTime)
-            .Where(r => r.Status != ReceiptStatus.Void)
-            .Select(r => new
-            {
-                r.InvoiceId,
-                r.CustomerName,
-                r.TotalAmount,
-                r.IssueDate
-            })
-            .ToListAsync();
-
-        // Calculate age breakdown (simplified)
-        var now = DateTime.UtcNow;
-        var ageBreakdown = new List<AgeBreakdown>
-        {
-            new AgeBreakdown
-            {
-                AgeRange = "0-30 days",
-                Amount = totalOutstanding * 0.5m,
-                Count = trackers.Count / 2
-            },
-            new AgeBreakdown
-            {
-                AgeRange = "31-60 days",
-                Amount = totalOutstanding * 0.3m,
-                Count = trackers.Count / 3
-            },
-            new AgeBreakdown
-            {
-                AgeRange = "61-90 days",
-                Amount = totalOutstanding * 0.15m,
-                Count = trackers.Count / 6
-            },
-            new AgeBreakdown
-            {
-                AgeRange = "90+ days",
-                Amount = totalOutstanding * 0.05m,
-                Count = trackers.Count / 12
-            }
-        };
-
-        // Top customers by outstanding (simplified)
-        var topCustomers = receipts
+        
+        var topCustomers = await _context.Receipts
+            .Where(r => r.IssueDate <= asOfDateTime && r.Status != ReceiptStatus.Void)
             .GroupBy(r => r.CustomerName)
             .Select(g => new TopCustomer
             {
                 CustomerName = g.Key,
-                OutstandingAmount = g.Sum(r => r.TotalAmount) * 0.1m, // Simplified calculation
+                OutstandingAmount = g.Sum(r => r.TotalAmount) * 0.1m, // Logic preserved from original
                 InvoiceCount = g.Count()
             })
             .OrderByDescending(c => c.OutstandingAmount)
             .Take(5)
-            .ToList();
+            .ToListAsync();
+
+        // Calculate age breakdown (simplified as we don't have invoice due dates in Receipt DB)
+        var ageBreakdown = new List<AgeBreakdown>
+        {
+            new AgeBreakdown { AgeRange = "0-30 days", Amount = totalOutstanding * 0.5m, Count = 0 },
+            new AgeBreakdown { AgeRange = "31-60 days", Amount = totalOutstanding * 0.3m, Count = 0 },
+            new AgeBreakdown { AgeRange = "61-90 days", Amount = totalOutstanding * 0.15m, Count = 0 },
+            new AgeBreakdown { AgeRange = "90+ days", Amount = totalOutstanding * 0.05m, Count = 0 }
+        };
 
         var response = new OutstandingReceivablesResponse
         {
@@ -205,10 +163,6 @@ public class AnalyticsService : IAnalyticsService
             {
                 AbsoluteExpirationRelativeToNow = CacheDuration
             });
-
-        _logger.LogInformation(
-            "Outstanding receivables calculated: {TotalOutstanding} {Currency}, cached for 5 minutes",
-            totalOutstanding, "THB");
 
         return response;
     }

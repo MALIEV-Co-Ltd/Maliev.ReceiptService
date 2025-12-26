@@ -20,9 +20,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
     public VoidReceiptContractTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken("staff-void-test"));
+        _client = factory.CreateAuthenticatedClientWithAllPermissions();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -44,7 +42,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
             PaymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -54,7 +52,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        var response = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -62,7 +60,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         Assert.NotNull(voidedReceipt);
         Assert.Equal("Void", voidedReceipt.Status);
         Assert.NotNull(voidedReceipt.VoidedAt);
-        Assert.Equal("staff-void-test", voidedReceipt.VoidedBy);
+        Assert.Equal("test-user", voidedReceipt.VoidedBy);
         Assert.Equal("Customer requested cancellation", voidedReceipt.VoidReason);
     }
 
@@ -77,7 +75,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync($"/v1/receipts/{receiptId}/void", voidRequest);
+        var response = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receiptId}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -94,7 +92,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync($"/v1/receipts/{receiptId}/void", voidRequest);
+        var response = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receiptId}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -110,7 +108,7 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts/invalid-guid/void", voidRequest);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts/invalid-guid/void", voidRequest);
 
         // Assert - Route constraint {id:guid} fails before reaching controller, returns 404
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -127,9 +125,10 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync($"/v1/receipts/{receiptId}/void", voidRequest);
+        var response = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receiptId}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
+

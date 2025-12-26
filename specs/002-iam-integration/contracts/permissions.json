@@ -1,0 +1,51 @@
+{
+  "serviceName": "receipt-service",
+  "permissions": [
+    { "id": "receipt.receipts.create", "description": "Create new receipts" },
+    { "id": "receipt.receipts.read", "description": "Read receipt details" },
+    { "id": "receipt.receipts.update", "description": "Update receipt information" },
+    { "id": "receipt.receipts.void", "description": "Void receipts" },
+    { "id": "receipt.receipts.query", "description": "Query receipt history" },
+    { "id": "receipt.receipts.export", "description": "Export receipt data" },
+    { "id": "receipt.partial-payments.create", "description": "Create partial payment records" },
+    { "id": "receipt.partial-payments.read", "description": "Read partial payment details" },
+    { "id": "receipt.partial-payments.manage", "description": "Manage partial payments" },
+    { "id": "receipt.audit.read", "description": "Read receipt audit logs" },
+    { "id": "receipt.audit.export", "description": "Export audit data" }
+  ],
+  "roles": [
+    {
+      "name": "receipt-admin",
+      "permissions": ["*"]
+    },
+    {
+      "name": "receipt-manager",
+      "permissions": [
+        "receipt.receipts.create", "receipt.receipts.read", "receipt.receipts.update", 
+        "receipt.receipts.void", "receipt.receipts.query", "receipt.receipts.export",
+        "receipt.partial-payments.create", "receipt.partial-payments.read", "receipt.partial-payments.manage",
+        "receipt.audit.read"
+      ]
+    },
+    {
+      "name": "receipt-creator",
+      "permissions": [
+        "receipt.receipts.create", "receipt.receipts.read", 
+        "receipt.partial-payments.create", "receipt.partial-payments.read"
+      ]
+    },
+    {
+      "name": "receipt-viewer",
+      "permissions": [
+        "receipt.receipts.read", "receipt.partial-payments.read"
+      ]
+    },
+    {
+      "name": "receipt-auditor",
+      "permissions": [
+        "receipt.receipts.read", "receipt.receipts.query", "receipt.receipts.export",
+        "receipt.audit.read", "receipt.audit.export"
+      ]
+    }
+  ]
+}

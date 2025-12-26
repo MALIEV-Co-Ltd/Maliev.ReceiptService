@@ -11,23 +11,11 @@ namespace Maliev.ReceiptService.Tests.Integration;
 /// Tests complete workflow: invoice retrieval → tax validation → numbering → audit → PDF event
 /// </summary>
 [Collection("IntegrationTests")]
-public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class ReceiptCreationTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
 
-    public ReceiptCreationTests(TestWebApplicationFactory factory)
+    public ReceiptCreationTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     [Fact]
@@ -42,7 +30,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -86,13 +74,13 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Fetch audit history
-        var auditResponse = await _client.GetAsync($"/v1/receipts/{receiptId}/audit-history");
+        var auditResponse = await Client.GetAsync($"/receipt/v1/receipts/{receiptId}/audit-history");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, auditResponse.StatusCode);
@@ -128,7 +116,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -143,7 +131,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
             paymentMethod = "Cash"
         };
 
-        var secondResponse = await _client.PostAsJsonAsync("/v1/receipts", secondRequest);
+        var secondResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", secondRequest);
 
         // Should get 409 Conflict if invoice is fully receipted
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
@@ -161,7 +149,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -215,7 +203,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
             paymentMethod = "Bank Transfer"
         };
 
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
 
@@ -240,7 +228,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
 
         // Act
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
         stopwatch.Stop();
 
         // Assert - SC-001: Receipt creation must complete within 5 seconds
@@ -261,7 +249,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -307,13 +295,13 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         };
 
         // Act - Create receipt
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
 
         // Fetch the same receipt
-        var getResponse = await _client.GetAsync($"/v1/receipts/{receiptId}");
+        var getResponse = await Client.GetAsync($"/receipt/v1/receipts/{receiptId}");
 
         // Assert - Receipt should be retrievable from database
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
@@ -336,7 +324,7 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
             paymentMethod = "Bank Transfer"
         };
 
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -350,3 +338,4 @@ public class ReceiptCreationTests : IClassFixture<TestWebApplicationFactory>, IA
         return int.Parse(parts[2]);
     }
 }
+

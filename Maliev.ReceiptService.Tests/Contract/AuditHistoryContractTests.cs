@@ -21,9 +21,7 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
     public AuditHistoryContractTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken("staff-audit-test"));
+        _client = factory.CreateAuthenticatedClientWithAllPermissions();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -45,16 +43,16 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
             PaymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
         // Void the receipt to create more audit events
         var voidRequest = new VoidReceiptRequest { Reason = "Test audit trail" };
-        await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receipt.Id}/audit-history");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -65,7 +63,7 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
         // Verify first event is Created
         var createdEvent = auditEvents.First(e => e.EventType == "Created");
         Assert.NotNull(createdEvent);
-        Assert.Equal("staff-audit-test", createdEvent.StaffMemberId);
+        Assert.Equal("test-user", createdEvent.StaffMemberId);
         Assert.NotEqual(default, createdEvent.Timestamp);
         Assert.NotNull(createdEvent.NewState);
 
@@ -84,7 +82,7 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
         var receiptId = Guid.NewGuid();
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receiptId}/audit-history");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receiptId}/audit-history");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -94,7 +92,7 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
     public async Task GetAuditHistory_WithInvalidGuid_Returns400()
     {
         // Act
-        var response = await _client.GetAsync("/v1/receipts/invalid-guid/audit-history");
+        var response = await _client.GetAsync("/receipt/v1/receipts/invalid-guid/audit-history");
 
         // Assert - Route constraint {id:guid} fails before reaching controller, returns 404
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -111,7 +109,7 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
             PaymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -119,10 +117,10 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
         await Task.Delay(100);
 
         var voidRequest = new VoidReceiptRequest { Reason = "Chronological test" };
-        await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receipt.Id}/audit-history");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -162,12 +160,12 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
             PaymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
         // Act
-        var response = await _client.GetAsync($"/v1/receipts/{receipt.Id}/audit-history");
+        var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
 
         // Assert
         var auditEvents = await response.Content.ReadFromJsonAsync<List<AuditEvent>>();
@@ -195,3 +193,4 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
         }
     }
 }
+

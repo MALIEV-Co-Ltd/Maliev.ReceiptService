@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Asp.Versioning;
 using Maliev.ReceiptService.Api.Exceptions;
 using Maliev.ReceiptService.Data.Models.Enums;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Services;
+using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.ReceiptService.Api.Services.IAM;
 
 namespace Maliev.ReceiptService.Api.Controllers;
 
@@ -10,8 +14,12 @@ namespace Maliev.ReceiptService.Api.Controllers;
 /// Receipts API controller per contracts/receipts-api.yaml
 /// </summary>
 [ApiController]
-[Route("v1/receipts")]
+[ApiVersion("1.0")]
+[Authorize]
+[Route("receipt/v{version:apiVersion}/receipts")]
 [Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
 public class ReceiptsController : ControllerBase
 {
     private readonly IReceiptService _receiptService;
@@ -27,9 +35,10 @@ public class ReceiptsController : ControllerBase
 
     /// <summary>
     /// Create a new receipt
-    /// POST /v1/receipts
+    /// POST /receipt/v1/receipts
     /// </summary>
     [HttpPost]
+    [RequirePermission(ReceiptPermissions.Receipts.Create)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -51,7 +60,7 @@ public class ReceiptsController : ControllerBase
             var receipt = await _receiptService.CreateReceiptAsync(request, staffId, correlationId);
             return CreatedAtAction(
                 nameof(GetReceiptById),
-                new { id = receipt.Id },
+                new { id = receipt.Id, version = "1.0" },
                 receipt);
         }
         catch (InvoiceNotFoundException ex)
@@ -106,6 +115,7 @@ public class ReceiptsController : ControllerBase
     /// GET /v1/receipts/{id}
     /// </summary>
     [HttpGet("{id:guid}")]
+    [RequirePermission(ReceiptPermissions.Receipts.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetReceiptById(Guid id)
@@ -130,6 +140,7 @@ public class ReceiptsController : ControllerBase
     /// Extended for US4 to support segment filtering (T082)
     /// </summary>
     [HttpGet]
+    [RequirePermission(ReceiptPermissions.Receipts.Query)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> QueryReceipts(
@@ -203,6 +214,7 @@ public class ReceiptsController : ControllerBase
     /// Task: T071 [P] [US3] Implement POST /v1/receipts/{id}/void
     /// </summary>
     [HttpPost("{id:guid}/void")]
+    [RequirePermission(ReceiptPermissions.Receipts.Void, IsCritical = true)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -250,6 +262,7 @@ public class ReceiptsController : ControllerBase
     /// Task: T072 [P] [US3] Implement GET /v1/receipts/{id}/audit-history
     /// </summary>
     [HttpGet("{id:guid}/audit-history")]
+    [RequirePermission(ReceiptPermissions.Audit.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAuditHistory(Guid id)

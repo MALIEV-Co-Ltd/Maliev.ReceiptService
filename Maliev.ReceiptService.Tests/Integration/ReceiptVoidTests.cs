@@ -17,25 +17,11 @@ namespace Maliev.ReceiptService.Tests.Integration;
 ///        T065 [P] [US3] Integration test for void+recreate correction workflow
 /// </summary>
 [Collection("IntegrationTests")]
-public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class ReceiptVoidTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
 
-    public ReceiptVoidTests(TestWebApplicationFactory factory)
+    public ReceiptVoidTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken("staff-void-integration"));
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     [Fact]
@@ -49,7 +35,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -59,7 +45,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         };
 
         // Act
-        var voidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        var voidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
@@ -67,11 +53,11 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         Assert.NotNull(voidedReceipt);
         Assert.Equal("Void", voidedReceipt.Status);
         Assert.NotNull(voidedReceipt.VoidedAt);
-        Assert.Equal("staff-void-integration", voidedReceipt.VoidedBy);
+        Assert.Equal("test-user", voidedReceipt.VoidedBy);
         Assert.Equal("Customer requested refund", voidedReceipt.VoidReason);
 
         // Verify audit trail created
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ReceiptDbContext>();
         var auditEvents = await dbContext.ReceiptAuditEvents
             .Where(e => e.ReceiptId == receipt.Id)
@@ -81,7 +67,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         Assert.Equal(2, auditEvents.Count); // Created + Voided
         var voidEvent = auditEvents[1];
         Assert.Equal("Voided", voidEvent.EventType.ToString());
-        Assert.Equal("staff-void-integration", voidEvent.StaffMemberId);
+        Assert.Equal("test-user", voidEvent.StaffMemberId);
         Assert.Equal("Customer requested refund", voidEvent.Reason);
         Assert.NotNull(voidEvent.PreviousState); // Should have snapshot before void
         Assert.NotNull(voidEvent.NewState); // Should have snapshot after void
@@ -99,12 +85,12 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
         // Verify balance before void
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ReceiptDbContext>();
             // InvoiceBalanceTracker has composite key (InvoiceId, SegmentId)
@@ -120,13 +106,13 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         };
 
         // Act
-        var voidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        var voidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
 
         // Verify balance restored
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ReceiptDbContext>();
             // InvoiceBalanceTracker has composite key (InvoiceId, SegmentId)
@@ -148,7 +134,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Credit Card"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -157,7 +143,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             Reason = "First void"
         };
 
-        var firstVoidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        var firstVoidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
         Assert.Equal(HttpStatusCode.OK, firstVoidResponse.StatusCode);
 
         // Act - Try to void again
@@ -165,7 +151,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         {
             Reason = "Second void attempt"
         };
-        var secondVoidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", secondVoidRequest);
+        var secondVoidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", secondVoidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, secondVoidResponse.StatusCode);
@@ -183,7 +169,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var originalReceipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(originalReceipt);
 
@@ -193,7 +179,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             Reason = "Incorrect amount - should be 1070.00"
         };
 
-        var voidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{originalReceipt.Id}/void", voidRequest);
+        var voidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{originalReceipt.Id}/void", voidRequest);
         Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
 
         // Create corrected receipt
@@ -204,7 +190,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Bank Transfer"
         };
 
-        var correctedResponse = await _client.PostAsJsonAsync("/v1/receipts", correctedRequest);
+        var correctedResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", correctedRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, correctedResponse.StatusCode);
@@ -214,7 +200,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         Assert.NotEqual(originalReceipt.ReceiptNumber, correctedReceipt.ReceiptNumber);
 
         // Verify both receipts exist in database
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ReceiptDbContext>();
         var receipts = await dbContext.Receipts
             .Where(r => r.InvoiceId == invoiceId)
@@ -237,7 +223,7 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
             PaymentMethod = "Cash"
         };
 
-        var createResponse = await _client.PostAsJsonAsync("/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -247,14 +233,15 @@ public class ReceiptVoidTests : IClassFixture<TestWebApplicationFactory>, IAsync
         };
 
         // Act
-        var voidResponse = await _client.PostAsJsonAsync($"/v1/receipts/{receipt.Id}/void", voidRequest);
+        var voidResponse = await Client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
         var voidedReceipt = await voidResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(voidedReceipt);
-        Assert.Equal("staff-void-integration", voidedReceipt.VoidedBy);
+        Assert.Equal("test-user", voidedReceipt.VoidedBy);
         Assert.NotNull(voidedReceipt.VoidedAt);
         Assert.True(voidedReceipt.VoidedAt <= DateTime.UtcNow);
     }
 }
+

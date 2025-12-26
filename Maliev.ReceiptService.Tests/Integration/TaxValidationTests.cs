@@ -10,23 +10,11 @@ namespace Maliev.ReceiptService.Tests.Integration;
 /// Tests that receipts with invalid tax fields are rejected before creation
 /// </summary>
 [Collection("IntegrationTests")]
-public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class TaxValidationTests : BaseReceiptIntegrationTest
 {
-    private readonly HttpClient _client;
-    private readonly TestWebApplicationFactory _factory;
 
-    public TaxValidationTests(TestWebApplicationFactory factory)
+    public TaxValidationTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await _factory.CleanDatabaseAsync();
-        _factory.ClearCache();
     }
 
     [Fact]
@@ -41,7 +29,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -69,7 +57,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -98,7 +86,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -126,7 +114,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -151,7 +139,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -187,7 +175,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -205,7 +193,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -223,7 +211,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -231,7 +219,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         // Verify no receipt was created in database
         // Since we got BadRequest, no receipt ID was returned
         // If we query for invoiceId, we should find no receipts
-        var queryResponse = await _client.GetAsync($"/v1/receipts?invoiceId=88888888-8888-8888-8888-888888888888");
+        var queryResponse = await Client.GetAsync($"/receipt/v1/receipts?invoiceId=88888888-8888-8888-8888-888888888888");
 
         if (queryResponse.StatusCode == HttpStatusCode.OK)
         {
@@ -258,7 +246,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -290,7 +278,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
                 paymentMethod = "Bank Transfer"
             };
 
-            var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+            var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
             // Assert
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -309,7 +297,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -330,7 +318,7 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/v1/receipts", request);
+        var response = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -343,3 +331,4 @@ public class TaxValidationTests : IClassFixture<TestWebApplicationFactory>, IAsy
         Assert.Equal("TAX_VALIDATION_FAILED", errorCode.GetString());
     }
 }
+
