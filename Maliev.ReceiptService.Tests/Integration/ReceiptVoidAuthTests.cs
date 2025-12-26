@@ -20,9 +20,9 @@ public class ReceiptVoidAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task VoidReceipt_WithVoidPermission_ShouldSucceed()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-admin", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Receipts.Void 
+        var token = _factory.CreateTestJwtToken("user-admin", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Receipts.Void
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -42,9 +42,9 @@ public class ReceiptVoidAuthTests : IClassFixture<TestWebApplicationFactory>
     public async Task VoidReceipt_WithoutPermission_ShouldFail()
     {
         // Arrange
-        var token = _factory.CreateTestJwtToken("user-creator", additionalClaims: new Dictionary<string, string> 
-        { 
-            ["permissions"] = ReceiptPermissions.Receipts.Create 
+        var token = _factory.CreateTestJwtToken("user-creator", additionalClaims: new Dictionary<string, string>
+        {
+            ["permissions"] = ReceiptPermissions.Receipts.Create
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);

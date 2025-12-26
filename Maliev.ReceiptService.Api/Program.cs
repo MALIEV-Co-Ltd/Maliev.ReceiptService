@@ -16,7 +16,7 @@ builder.AddStandardMiddleware(options =>
 builder.AddServiceMeters("receipts-meter", "receipts-auth-meter"); // Register service meters for OpenTelemetry business metrics
 
 builder.Services.AddSingleton<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>();
-builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp => 
+builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
     sp.GetRequiredService<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>());
 
 // Database Context with ServiceDefaults (skip in Testing environment - handled by test factory)
