@@ -49,13 +49,6 @@ public class ReceiptIAMRegistrationService : IAMRegistrationService
 
     public async Task RegisterWithCheckAsync(CancellationToken cancellationToken)
     {
-        var iamEnabled = _configuration.GetValue<bool>("Features:PermissionBasedAuthEnabled", true);
-        if (!iamEnabled)
-        {
-            _logger.LogInformation("IAM registration skipped (PermissionBasedAuthEnabled=false)");
-            return;
-        }
-
         await base.RegisterAsync(cancellationToken);
     }
 }
