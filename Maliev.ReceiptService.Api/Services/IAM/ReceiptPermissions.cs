@@ -2,30 +2,31 @@ namespace Maliev.ReceiptService.Api.Services.IAM;
 
 /// <summary>
 /// Defines all permission strings for the ReceiptService.
+/// Note: Constants include "Permission:" prefix for integration with ServiceDefaults policy provider.
 /// </summary>
 public static class ReceiptPermissions
 {
     public static class Receipts
     {
-        public const string Create = "receipt.receipts.create";
-        public const string Read = "receipt.receipts.read";
-        public const string Update = "receipt.receipts.update";
-        public const string Void = "receipt.receipts.void";
-        public const string Query = "receipt.receipts.query";
-        public const string Export = "receipt.receipts.export";
+        public const string Create = "Permission:receipt.receipts.create";
+        public const string Read = "Permission:receipt.receipts.read";
+        public const string Update = "Permission:receipt.receipts.update";
+        public const string Void = "Permission:receipt.receipts.void";
+        public const string Query = "Permission:receipt.receipts.query";
+        public const string Export = "Permission:receipt.receipts.export";
     }
 
     public static class PartialPayments
     {
-        public const string Create = "receipt.partial-payments.create";
-        public const string Read = "receipt.partial-payments.read";
-        public const string Manage = "receipt.partial-payments.manage";
+        public const string Create = "Permission:receipt.partial-payments.create";
+        public const string Read = "Permission:receipt.partial-payments.read";
+        public const string Manage = "Permission:receipt.partial-payments.manage";
     }
 
     public static class Audit
     {
-        public const string Read = "receipt.audit.read";
-        public const string Export = "receipt.audit.export";
+        public const string Read = "Permission:receipt.audit.read";
+        public const string Export = "Permission:receipt.audit.export";
     }
 
     /// <summary>
