@@ -40,6 +40,8 @@ public class IAMRegistrationTests : IClassFixture<TestWebApplicationFactory>
         using var scope = _factory.Services.CreateScope();
         var services = scope.ServiceProvider.GetServices<IHostedService>();
 
-        Assert.Contains(services, s => s is ReceiptIAMRegistrationService);
+        // BackgroundIAMRegistrationService wraps the actual ReceiptIAMRegistrationService
+        Assert.Contains(services, s => s.GetType().Name.Contains("BackgroundIAMRegistrationService") ||
+                                        s is ReceiptIAMRegistrationService);
     }
 }
