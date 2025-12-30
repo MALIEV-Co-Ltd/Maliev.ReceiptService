@@ -72,19 +72,8 @@ builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceSe
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// Run database migrations on startup (skip in Testing environment)
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    try
-    {
-        await app.MigrateDatabaseAsync<ReceiptDbContext>();
-    }
-    catch (Exception ex)
-    {
-        Log.MigrationFailed(logger, ex);
-        // Don't throw - allow app to start for debugging
-    }
-}
+// --- Database Migrations ---
+await app.MigrateDatabaseAsync<ReceiptDbContext>();
 
 // Middleware Pipeline
 app.UseStandardMiddleware();

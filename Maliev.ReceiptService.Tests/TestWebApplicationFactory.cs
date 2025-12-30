@@ -4,6 +4,7 @@ using WireMock.Server;
 using WireMock.RequestBuilders;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 using MassTransit;
 using WireMockResponse = WireMock.ResponseBuilders.Response;
 
@@ -36,10 +37,6 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Add permission-based authorization infrastructure for tests
         services.AddHttpContextAccessor();
-#pragma warning disable ASPDEPR006
-        services.AddSingleton<Microsoft.AspNetCore.Mvc.Infrastructure.IActionContextAccessor,
-                              Microsoft.AspNetCore.Mvc.Infrastructure.ActionContextAccessor>();
-#pragma warning restore ASPDEPR006
         services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
                               Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationPolicyProvider>();
         services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
