@@ -6,14 +6,26 @@ namespace Maliev.ReceiptService.Api.Exceptions;
 /// </summary>
 public class ReceiptNotFoundException : Exception
 {
+    /// <summary>
+    /// Gets the receipt ID.
+    /// </summary>
     public Guid ReceiptId { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceiptNotFoundException"/> class.
+    /// </summary>
+    /// <param name="receiptId">The receipt ID.</param>
+    /// <param name="message">The exception message.</param>
     public ReceiptNotFoundException(Guid receiptId, string message)
         : base(message)
     {
         ReceiptId = receiptId;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceiptNotFoundException"/> class.
+    /// </summary>
+    /// <param name="receiptId">The receipt ID.</param>
     public ReceiptNotFoundException(Guid receiptId)
         : base($"Receipt {receiptId} not found")
     {

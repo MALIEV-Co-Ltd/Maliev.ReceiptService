@@ -30,6 +30,17 @@ public class ReceiptService : IReceiptService
     private readonly Counter<long> _receiptsCreatedCounter;
     private readonly Histogram<double> _creationDurationHistogram;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceiptService"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="invoiceClient">The invoice service client.</param>
+    /// <param name="taxValidator">The tax validator.</param>
+    /// <param name="numberGenerator">The receipt number generator.</param>
+    /// <param name="publishEndpoint">The publish endpoint.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="receiptsCreatedCounter">The receipts created counter.</param>
+    /// <param name="creationDurationHistogram">The creation duration histogram.</param>
     public ReceiptService(
         ReceiptDbContext context,
         IInvoiceServiceClient invoiceClient,
@@ -50,6 +61,13 @@ public class ReceiptService : IReceiptService
         _creationDurationHistogram = creationDurationHistogram;
     }
 
+    /// <summary>
+    /// Creates a new receipt asynchronously.
+    /// </summary>
+    /// <param name="request">The create receipt request.</param>
+    /// <param name="staffId">The ID of the staff member creating the receipt.</param>
+    /// <param name="correlationId">The correlation ID for the operation.</param>
+    /// <returns>The created receipt response.</returns>
     public async Task<ReceiptResponse> CreateReceiptAsync(
         CreateReceiptRequest request,
         string staffId,
@@ -263,6 +281,11 @@ public class ReceiptService : IReceiptService
         return receipt.ToResponse();
     }
 
+    /// <summary>
+    /// Retrieves a receipt by its ID.
+    /// </summary>
+    /// <param name="id">The receipt ID.</param>
+    /// <returns>The receipt response if found; otherwise, null.</returns>
     public async Task<ReceiptResponse?> GetReceiptByIdAsync(Guid id)
     {
         var receipt = await _context.Receipts
@@ -272,6 +295,19 @@ public class ReceiptService : IReceiptService
         return receipt?.ToResponse();
     }
 
+    /// <summary>
+    /// Queries receipts with filtering, sorting, and pagination.
+    /// </summary>
+    /// <param name="invoiceId">The optional invoice ID filter.</param>
+    /// <param name="status">The optional status filter.</param>
+    /// <param name="fromDate">The optional start date filter.</param>
+    /// <param name="toDate">The optional end date filter.</param>
+    /// <param name="segmentId">The optional segment ID filter.</param>
+    /// <param name="page">The page number.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="sortBy">The field to sort by.</param>
+    /// <param name="sortOrder">The sort order (asc or desc).</param>
+    /// <returns>A paged response of receipt responses.</returns>
     public async Task<PagedResponse<ReceiptResponse>> QueryReceiptsAsync(
         Guid? invoiceId = null,
         ReceiptStatus? status = null,

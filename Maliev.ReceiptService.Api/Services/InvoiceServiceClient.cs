@@ -4,6 +4,9 @@ using System.Text.Json;
 
 namespace Maliev.ReceiptService.Api.Services;
 
+/// <summary>
+/// Implementation of the invoice service client.
+/// </summary>
 public class InvoiceServiceClient : IInvoiceServiceClient
 {
     private readonly HttpClient _httpClient;
@@ -13,12 +16,23 @@ public class InvoiceServiceClient : IInvoiceServiceClient
         PropertyNameCaseInsensitive = true
     };
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvoiceServiceClient"/> class.
+    /// </summary>
+    /// <param name="httpClient">The HTTP client.</param>
+    /// <param name="logger">The logger.</param>
     public InvoiceServiceClient(HttpClient httpClient, ILogger<InvoiceServiceClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves an invoice by its ID.
+    /// </summary>
+    /// <param name="invoiceId">The invoice ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The invoice DTO if found; otherwise, null.</returns>
     public async Task<InvoiceDto?> GetInvoiceAsync(Guid invoiceId, CancellationToken cancellationToken = default)
     {
         try

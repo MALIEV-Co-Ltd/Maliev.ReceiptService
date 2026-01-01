@@ -20,6 +20,11 @@ public class AnalyticsController : ControllerBase
     private readonly IAnalyticsService _analyticsService;
     private readonly ILogger<AnalyticsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnalyticsController"/> class.
+    /// </summary>
+    /// <param name="analyticsService">The analytics service.</param>
+    /// <param name="logger">The logger.</param>
     public AnalyticsController(
         IAnalyticsService analyticsService,
         ILogger<AnalyticsController> logger)

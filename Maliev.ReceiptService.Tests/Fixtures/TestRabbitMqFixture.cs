@@ -9,7 +9,7 @@ public class TestRabbitMqFixture : IAsyncLifetime
     public TestRabbitMqFixture()
     {
         _container = new RabbitMqBuilder()
-            .WithImage("rabbitmq:3.13-management-alpine")
+            .WithImage("rabbitmq:4.2-alpine")
             .Build();
     }
 

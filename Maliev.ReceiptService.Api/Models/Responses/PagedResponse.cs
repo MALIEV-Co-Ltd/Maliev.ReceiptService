@@ -6,6 +6,13 @@ namespace Maliev.ReceiptService.Api.Models.Responses;
 /// </summary>
 public class PagedResponse<T>
 {
+    /// <summary>
+    /// Gets or sets the data.
+    /// </summary>
     public List<T> Data { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the pagination metadata.
+    /// </summary>
     public PaginationMetadata Pagination { get; set; } = new();
 }

@@ -19,6 +19,12 @@ public class AnalyticsService : IAnalyticsService
     private readonly ILogger<AnalyticsService> _logger;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnalyticsService"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="cache">The distributed cache.</param>
+    /// <param name="logger">The logger.</param>
     public AnalyticsService(
         ReceiptDbContext context,
         IDistributedCache cache,
@@ -29,6 +35,13 @@ public class AnalyticsService : IAnalyticsService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets the payment completion rate for a given period.
+    /// </summary>
+    /// <param name="startDate">The start date.</param>
+    /// <param name="endDate">The end date.</param>
+    /// <param name="groupBy">The grouping unit (day, week, month).</param>
+    /// <returns>The payment completion response.</returns>
     public async Task<PaymentCompletionResponse> GetPaymentCompletionRateAsync(
         DateOnly startDate,
         DateOnly endDate,
@@ -98,6 +111,11 @@ public class AnalyticsService : IAnalyticsService
         return response;
     }
 
+    /// <summary>
+    /// Gets the outstanding receivables as of a specific date.
+    /// </summary>
+    /// <param name="asOfDate">The optional as-of date.</param>
+    /// <returns>The outstanding receivables response.</returns>
     public async Task<OutstandingReceivablesResponse> GetOutstandingReceivablesAsync(
         DateOnly? asOfDate = null)
     {
@@ -167,6 +185,13 @@ public class AnalyticsService : IAnalyticsService
         return response;
     }
 
+    /// <summary>
+    /// Gets customer payment behavior for a given period.
+    /// </summary>
+    /// <param name="startDate">The start date.</param>
+    /// <param name="endDate">The end date.</param>
+    /// <param name="customerId">The optional customer ID.</param>
+    /// <returns>The payment behavior response.</returns>
     public async Task<PaymentBehaviorResponse> GetCustomerPaymentBehaviorAsync(
         DateOnly startDate,
         DateOnly endDate,
@@ -245,6 +270,12 @@ public class AnalyticsService : IAnalyticsService
         return response;
     }
 
+    /// <summary>
+    /// Gets processing metrics for a given period.
+    /// </summary>
+    /// <param name="startDate">The start date and time.</param>
+    /// <param name="endDate">The end date and time.</param>
+    /// <returns>The processing metrics response.</returns>
     public async Task<ProcessingMetricsResponse> GetProcessingMetricsAsync(
         DateTime startDate,
         DateTime endDate)

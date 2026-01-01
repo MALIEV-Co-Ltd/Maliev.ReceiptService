@@ -22,6 +22,11 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
     private readonly ReceiptDbContext _context;
     private readonly ILogger<PdfGeneratedEventConsumer> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PdfGeneratedEventConsumer"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="logger">The logger.</param>
     public PdfGeneratedEventConsumer(
         ReceiptDbContext context,
         ILogger<PdfGeneratedEventConsumer> logger)
@@ -30,6 +35,11 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
         _logger = logger;
     }
 
+    /// <summary>
+    /// Consumes the <see cref="PdfGeneratedEvent"/>.
+    /// </summary>
+    /// <param name="context">The consume context.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task Consume(ConsumeContext<PdfGeneratedEvent> context)
     {
         var message = context.Message;

@@ -14,6 +14,11 @@ public class AuthMetrics : IAuthMetrics
     private readonly Counter<long> _authFailureCounter;
     private readonly KeyValuePair<string, object?>[] _defaultTags;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthMetrics"/> class.
+    /// </summary>
+    /// <param name="meterFactory">The meter factory.</param>
+    /// <param name="configuration">The configuration.</param>
     public AuthMetrics(IMeterFactory meterFactory, IConfiguration configuration)
     {
         var serviceName = configuration["Service:Name"] ?? "ReceiptService";
@@ -31,6 +36,10 @@ public class AuthMetrics : IAuthMetrics
         };
     }
 
+    /// <summary>
+    /// Records a successful authorization event.
+    /// </summary>
+    /// <param name="permission">The permission that was checked.</param>
     public void RecordSuccess(string permission)
     {
         var tags = new TagList();
@@ -39,6 +48,11 @@ public class AuthMetrics : IAuthMetrics
         _authSuccessCounter.Add(1, tags);
     }
 
+    /// <summary>
+    /// Records a failed authorization event.
+    /// </summary>
+    /// <param name="permission">The permission that was checked.</param>
+    /// <param name="reason">The reason for failure.</param>
     public void RecordFailure(string permission, string reason)
     {
         var tags = new TagList();

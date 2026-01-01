@@ -9,7 +9,7 @@ public class TestRedisFixture : IAsyncLifetime
     public TestRedisFixture()
     {
         _container = new RedisBuilder()
-            .WithImage("redis:7-alpine")
+            .WithImage("redis:8.4-alpine")
             .Build();
     }
 

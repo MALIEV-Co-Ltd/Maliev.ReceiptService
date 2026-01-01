@@ -12,11 +12,21 @@ public class ReceiptNumberGenerator : IReceiptNumberGenerator
 {
     private readonly ReceiptDbContext _context;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceiptNumberGenerator"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
     public ReceiptNumberGenerator(ReceiptDbContext context)
     {
         _context = context;
     }
 
+    /// <summary>
+    /// Generates the next sequential receipt number.
+    /// </summary>
+    /// <param name="entity">The entity prefix (e.g., MALIEV).</param>
+    /// <param name="year">The year.</param>
+    /// <returns>The next receipt number string.</returns>
     public async Task<string> GenerateNextReceiptNumberAsync(string entity, int year)
     {
         if (string.IsNullOrWhiteSpace(entity))

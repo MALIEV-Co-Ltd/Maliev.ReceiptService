@@ -25,6 +25,11 @@ public class ReceiptsController : ControllerBase
     private readonly IReceiptService _receiptService;
     private readonly ILogger<ReceiptsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReceiptsController"/> class.
+    /// </summary>
+    /// <param name="receiptService">The receipt service.</param>
+    /// <param name="logger">The logger.</param>
     public ReceiptsController(
         IReceiptService receiptService,
         ILogger<ReceiptsController> logger)

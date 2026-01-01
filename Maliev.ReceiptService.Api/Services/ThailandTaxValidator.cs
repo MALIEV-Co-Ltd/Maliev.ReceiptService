@@ -11,6 +11,12 @@ public class ThailandTaxValidator : ITaxValidator
 {
     private const decimal ThailandVatRate = 7.0m;
 
+    /// <summary>
+    /// Validates tax compliance for a receipt in Thailand.
+    /// </summary>
+    /// <param name="invoice">The invoice details.</param>
+    /// <param name="request">The receipt creation request.</param>
+    /// <returns>A validation result indicating success or failure with error messages.</returns>
     public ValidationResult ValidateReceipt(InvoiceDto invoice, CreateReceiptRequest request)
     {
         var errors = new List<string>();

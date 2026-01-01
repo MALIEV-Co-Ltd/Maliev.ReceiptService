@@ -2,8 +2,15 @@ using Maliev.Aspire.ServiceDefaults.IAM;
 
 namespace Maliev.ReceiptService.Api.Services.IAM;
 
+/// <summary>
+/// Defines predefined roles for the Receipt Service.
+/// </summary>
 public static class ReceiptPredefinedRoles
 {
+    /// <summary>
+    /// Gets the list of predefined roles.
+    /// </summary>
+    /// <returns>A collection of role registrations.</returns>
     public static IEnumerable<RoleRegistration> GetRoles()
     {
         yield return new RoleRegistration
