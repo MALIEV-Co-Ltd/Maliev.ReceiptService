@@ -4,6 +4,7 @@ using WireMock.Server;
 using WireMock.RequestBuilders;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Hosting;
 using System.Diagnostics.CodeAnalysis;
 using MassTransit;
 using WireMockResponse = WireMock.ResponseBuilders.Response;

@@ -154,13 +154,6 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
         builder.ConfigureTestServices(services =>
         {
-            // Configure MassTransit to wait until started to avoid race conditions
-            services.Configure<MassTransitHostOptions>(options =>
-            {
-                options.WaitUntilStarted = true;
-                options.StartTimeout = TimeSpan.FromSeconds(30);
-            });
-
             // Configure JWT Bearer authentication with test RSA key
             services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
             {
