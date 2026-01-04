@@ -7,7 +7,7 @@ using Maliev.ReceiptService.Tests.Fixtures;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
-public class ReceiptCreationAuthTests : IClassFixture<TestWebApplicationFactory>
+public class ReceiptCreationAuthTests
 {
     private readonly TestWebApplicationFactory _factory;
 

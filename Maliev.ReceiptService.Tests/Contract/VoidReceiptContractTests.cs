@@ -12,7 +12,7 @@ namespace Maliev.ReceiptService.Tests.Contract;
 /// Tests: T062 [P] [US3] Contract test for POST /v1/receipts/{id}/void
 /// </summary>
 [Collection("IntegrationTests")]
-public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class VoidReceiptContractTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly TestWebApplicationFactory _factory;
@@ -131,4 +131,3 @@ public class VoidReceiptContractTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
-

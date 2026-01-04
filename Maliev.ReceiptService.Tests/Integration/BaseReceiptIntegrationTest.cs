@@ -7,7 +7,7 @@ namespace Maliev.ReceiptService.Tests.Integration;
 /// Provides authenticated HTTP client with all receipt permissions by default.
 /// </summary>
 [Collection("IntegrationTests")]
-public abstract class BaseReceiptIntegrationTest : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public abstract class BaseReceiptIntegrationTest : IAsyncLifetime
 {
     protected readonly HttpClient Client;
     protected readonly TestWebApplicationFactory Factory;

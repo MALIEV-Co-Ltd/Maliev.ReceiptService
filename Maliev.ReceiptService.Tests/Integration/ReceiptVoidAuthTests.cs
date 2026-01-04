@@ -7,7 +7,7 @@ using Maliev.ReceiptService.Tests.Fixtures;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
-public class ReceiptVoidAuthTests : IClassFixture<TestWebApplicationFactory>
+public class ReceiptVoidAuthTests
 {
     private readonly TestWebApplicationFactory _factory;
 

@@ -6,7 +6,7 @@ using Xunit;
 namespace Maliev.ReceiptService.Tests.Contract;
 
 [Collection("IntegrationTests")]
-public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class CreateReceiptContractTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly TestWebApplicationFactory _factory;
@@ -302,4 +302,3 @@ public class CreateReceiptContractTests : IClassFixture<TestWebApplicationFactor
         Assert.True(firstLine.TryGetProperty("lineTotal", out _));
     }
 }
-

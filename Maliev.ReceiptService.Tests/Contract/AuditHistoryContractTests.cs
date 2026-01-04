@@ -13,7 +13,7 @@ namespace Maliev.ReceiptService.Tests.Contract;
 /// Tests: T066 [P] [US3] Contract test for GET /v1/receipts/{id}/audit-history
 /// </summary>
 [Collection("IntegrationTests")]
-public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class AuditHistoryContractTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly TestWebApplicationFactory _factory;
@@ -193,4 +193,3 @@ public class AuditHistoryContractTests : IClassFixture<TestWebApplicationFactory
         }
     }
 }
-

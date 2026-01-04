@@ -6,7 +6,8 @@ using Maliev.ReceiptService.Tests.Fixtures;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
-public class AuditAuthTests : IClassFixture<TestWebApplicationFactory>
+[Collection("IntegrationTests")]
+public class AuditAuthTests
 {
     private readonly TestWebApplicationFactory _factory;
 

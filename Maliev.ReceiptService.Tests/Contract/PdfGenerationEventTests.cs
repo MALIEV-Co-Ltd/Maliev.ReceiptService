@@ -13,7 +13,7 @@ namespace Maliev.ReceiptService.Tests.Contract;
 /// Verifies event structure, serialization, and publishing behavior
 /// </summary>
 [Collection("IntegrationTests")]
-public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class PdfGenerationEventTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly TestWebApplicationFactory _factory;
@@ -423,4 +423,3 @@ public class PdfGenerationEventTests : IClassFixture<TestWebApplicationFactory>,
         await harness.Stop();
     }
 }
-

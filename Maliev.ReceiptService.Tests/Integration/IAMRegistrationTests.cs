@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
-public class IAMRegistrationTests : IClassFixture<TestWebApplicationFactory>
+public class IAMRegistrationTests
 {
     private readonly TestWebApplicationFactory _factory;
 

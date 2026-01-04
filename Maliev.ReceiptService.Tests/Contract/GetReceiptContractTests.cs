@@ -6,7 +6,7 @@ using Xunit;
 namespace Maliev.ReceiptService.Tests.Contract;
 
 [Collection("IntegrationTests")]
-public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+public class GetReceiptContractTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly TestWebApplicationFactory _factory;
@@ -286,4 +286,3 @@ public class GetReceiptContractTests : IClassFixture<TestWebApplicationFactory>,
         );
     }
 }
-

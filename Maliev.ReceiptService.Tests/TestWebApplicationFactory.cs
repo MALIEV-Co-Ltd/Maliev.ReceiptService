@@ -12,25 +12,36 @@ namespace Maliev.ReceiptService.Tests;
 
 public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, ReceiptDbContext>
 {
-    private WireMockServer? _invoiceServiceMock;
+    private readonly WireMockServer _invoiceServiceMock;
 
-    public WireMockServer InvoiceServiceMock => _invoiceServiceMock ?? throw new InvalidOperationException("InvoiceServiceMock not initialized");
+    public WireMockServer InvoiceServiceMock => _invoiceServiceMock;
 
-    protected override void ConfigureEnvironmentVariables()
+    public TestWebApplicationFactory()
     {
-        base.ConfigureEnvironmentVariables();
-
         // Initialize WireMock servers for external services
         _invoiceServiceMock = WireMockServer.Start();
-
-        // Configure HttpClient base URL for InvoiceService with /v1/ path and trailing slash
-        // The trailing slash is critical - without it, HttpClient treats the path as replacing the base path
-        Environment.SetEnvironmentVariable("InvoiceService__BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
-        Environment.SetEnvironmentVariable("IAM__BaseUrl", _invoiceServiceMock.Urls[0]);
 
         // Set up default WireMock responses for external services
         SetupInvoiceServiceMockResponses();
         SetupIAMServiceMockResponses();
+    }
+
+    protected override void ConfigureEnvironmentVariables()
+    {
+        base.ConfigureEnvironmentVariables();
+        // Environment variables are still set for non-web components that might read them
+        Environment.SetEnvironmentVariable("InvoiceService__BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
+        Environment.SetEnvironmentVariable("IAM__BaseUrl", _invoiceServiceMock.Urls[0]);
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+
+        // Configure HttpClient base URL for InvoiceService with /v1/ path and trailing slash
+        // Using builder.UseSetting is more reliable than Environment.SetEnvironmentVariable
+        builder.UseSetting("InvoiceService:BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
+        builder.UseSetting("IAM:BaseUrl", _invoiceServiceMock.Urls[0]);
     }
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)
@@ -44,10 +55,6 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
         services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
                            Maliev.Aspire.ServiceDefaults.Authorization.PermissionAuthorizationHandler>();
         services.AddAuthorizationBuilder();
-
-        // MassTransit test harness works alongside the existing RabbitMQ configuration
-        // When started, it intercepts all Publish/Send calls for testing
-        services.AddMassTransitTestHarness();
     }
 
     private void SetupInvoiceServiceMockResponses()
