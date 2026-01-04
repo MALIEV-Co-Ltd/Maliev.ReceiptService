@@ -66,4 +66,20 @@ public interface IReceiptService
     /// <param name="receiptId">Receipt ID</param>
     /// <returns>List of audit events in chronological order</returns>
     Task<List<AuditEvent>> GetAuditHistoryAsync(Guid receiptId);
+
+    /// <summary>
+    /// Sends a receipt to a customer via specified channel
+    /// </summary>
+    /// <param name="receiptId">Receipt ID to send</param>
+    /// <param name="destination">Destination (email, phone number, etc.)</param>
+    /// <param name="channel">Delivery channel (Email, SMS, LINE, WhatsApp)</param>
+    /// <param name="staffId">Staff member initiating the send</param>
+    /// <param name="correlationId">Correlation ID for distributed tracing</param>
+    /// <returns>Receipt response</returns>
+    Task<ReceiptResponse> SendReceiptAsync(
+        Guid receiptId,
+        string destination,
+        string channel,
+        string staffId,
+        Guid correlationId);
 }

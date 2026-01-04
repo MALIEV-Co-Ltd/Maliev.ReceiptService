@@ -26,9 +26,11 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
         // Configure HttpClient base URL for InvoiceService with /v1/ path and trailing slash
         // The trailing slash is critical - without it, HttpClient treats the path as replacing the base path
         Environment.SetEnvironmentVariable("InvoiceService__BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
+        Environment.SetEnvironmentVariable("IAM__BaseUrl", _invoiceServiceMock.Urls[0]);
 
-        // Set up default WireMock responses for InvoiceService
+        // Set up default WireMock responses for external services
         SetupInvoiceServiceMockResponses();
+        SetupIAMServiceMockResponses();
     }
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)
@@ -1036,6 +1038,27 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
         var client = CreateClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
         return client;
+    }
+
+    private void SetupIAMServiceMockResponses()
+    {
+        if (_invoiceServiceMock == null) return;
+
+        // Mock IAM permission registration
+        _invoiceServiceMock
+            .Given(Request.Create().WithPath("/iam/v1/permissions/register").UsingPost())
+            .RespondWith(WireMockResponse.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("{\"status\":\"success\"}"));
+
+        // Mock IAM role registration
+        _invoiceServiceMock
+            .Given(Request.Create().WithPath("/iam/v1/roles/register").UsingPost())
+            .RespondWith(WireMockResponse.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("{\"status\":\"success\"}"));
     }
 
     protected override void Dispose(bool disposing)
