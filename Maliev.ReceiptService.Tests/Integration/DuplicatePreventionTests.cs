@@ -10,6 +10,7 @@ namespace Maliev.ReceiptService.Tests.Integration;
 /// Integration tests for duplicate receipt prevention and over-receipting protection
 /// Tests balance tracking and concurrency control per research.md Decision 4
 /// </summary>
+[Collection("IntegrationTests")]
 public class DuplicatePreventionTests : BaseReceiptIntegrationTest
 {
     public DuplicatePreventionTests(TestWebApplicationFactory factory) : base(factory)

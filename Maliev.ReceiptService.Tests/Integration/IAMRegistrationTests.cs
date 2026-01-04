@@ -1,12 +1,12 @@
 using Maliev.Aspire.ServiceDefaults.Testing;
 using Maliev.ReceiptService.Api.Services.IAM;
-using Maliev.ReceiptService.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
+[Collection("IntegrationTests")]
 public class IAMRegistrationTests
 {
     private readonly TestWebApplicationFactory _factory;

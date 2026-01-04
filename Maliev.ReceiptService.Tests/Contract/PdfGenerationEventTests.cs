@@ -39,9 +39,10 @@ public class PdfGenerationEventTests : IAsyncLifetime
         var harness = _factory.Services.GetRequiredService<ITestHarness>();
         await harness.Start();
 
+        var invoiceId = Guid.NewGuid();
         var request = new
         {
-            invoiceId = Guid.NewGuid().ToString(),
+            invoiceId = invoiceId.ToString(),
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };
@@ -52,12 +53,19 @@ public class PdfGenerationEventTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        // Verify event was published
-        var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
-        Assert.True(published, "PdfGenerationRequestedEvent should be published");
+        // Verify event was published with matching CorrelationId
+        var correlationIdHeader = response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value?.FirstOrDefault();
+        Assert.NotNull(correlationIdHeader);
+        var correlationId = Guid.Parse(correlationIdHeader);
+
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
+        Assert.True(published, "PdfGenerationRequestedEvent should be published with matching CorrelationId");
 
         // Get the published message
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
 
         var eventData = publishedMessage.Context.Message;
@@ -65,7 +73,7 @@ public class PdfGenerationEventTests : IAsyncLifetime
         // Verify required fields per message-contracts.md
         Assert.NotEqual(Guid.Empty, eventData.ReceiptId);
         Assert.Matches(@"^[A-Z]+-\d{4}-\d{6}$", eventData.ReceiptNumber);
-        Assert.NotEqual(Guid.Empty, eventData.CorrelationId);
+        Assert.Equal(correlationId, eventData.CorrelationId);
         Assert.True(eventData.Timestamp > DateTime.MinValue);
 
         await harness.Stop();
@@ -86,13 +94,17 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
         Assert.True(published);
 
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 
@@ -112,8 +124,6 @@ public class PdfGenerationEventTests : IAsyncLifetime
         var harness = _factory.Services.GetRequiredService<ITestHarness>();
         await harness.Start();
 
-        var eventCountBefore = harness.Published.Select<PdfGenerationRequestedEvent>().Count();
-
         var request = new
         {
             invoiceId = Guid.NewGuid().ToString(),
@@ -122,14 +132,18 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
         Assert.True(published);
 
-        // Get the LAST published message (most recent)
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().Skip(eventCountBefore).FirstOrDefault();
+        // Get the published message
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 
@@ -159,10 +173,13 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 
@@ -196,10 +213,13 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 
@@ -226,10 +246,13 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == correlationId);
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 
@@ -317,11 +340,14 @@ public class PdfGenerationEventTests : IAsyncLifetime
 
         // Act
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Wait for the event to be published (MassTransit's Any() method doesn't have a timeout parameter)
         await Task.Delay(TimeSpan.FromSeconds(2));
-        var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
         stopwatch.Stop();
 
         // Assert - SC-004: Published within reasonable time (including test harness overhead)
@@ -347,10 +373,13 @@ public class PdfGenerationEventTests : IAsyncLifetime
         };
 
         // Act
-        await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationId = Guid.Parse(response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value!.First());
 
         // Assert
-        var published = await harness.Published.Any<PdfGenerationRequestedEvent>();
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
         Assert.True(published);
 
         // Verify routing key: maliev.receipt.v1.pdf.requested
@@ -367,9 +396,6 @@ public class PdfGenerationEventTests : IAsyncLifetime
         var harness = _factory.Services.GetRequiredService<ITestHarness>();
         await harness.Start();
 
-        // Count events before the test
-        var eventCountBefore = harness.Published.Select<PdfGenerationRequestedEvent>().Count();
-
         var request = new
         {
             invoiceId = "11111111-1111-1111-1111-111111111111",  // Invalid tax fields
@@ -379,15 +405,20 @@ public class PdfGenerationEventTests : IAsyncLifetime
 
         // Act
         var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
+        var correlationIdHeader = response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value?.FirstOrDefault();
+        Assert.NotNull(correlationIdHeader);
+        var correlationId = Guid.Parse(correlationIdHeader);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        // Verify NO NEW event was published (wait a bit to ensure no event is published)
+        // Verify NO NEW event was published for THIS correlation ID
         await Task.Delay(TimeSpan.FromMilliseconds(500));
-        var eventCountAfter = harness.Published.Select<PdfGenerationRequestedEvent>().Count();
-        Assert.True(eventCountBefore == eventCountAfter,
-            $"PdfGenerationRequestedEvent should NOT be published for validation failures. Before: {eventCountBefore}, After: {eventCountAfter}");
+        var published = await harness.Published.Any<PdfGenerationRequestedEvent>(m =>
+            m.Context.Message.CorrelationId == correlationId);
+        Assert.False(published,
+            $"PdfGenerationRequestedEvent should NOT be published for validation failures. CorrelationId: {correlationId}");
 
         await harness.Stop();
     }
@@ -409,12 +440,14 @@ public class PdfGenerationEventTests : IAsyncLifetime
         // Act
         var response = await _client.PostAsJsonAsync("/receipt/v1/receipts", request);
 
-        // Get correlation ID from response header
-        var correlationIdHeader = response.Headers.GetValues("X-Correlation-Id").FirstOrDefault();
+        // Get correlation ID from response header (Case sensitive in some versions of HttpClient)
+        var correlationIdHeader = response.Headers.FirstOrDefault(h =>
+            h.Key.Equals("X-Correlation-ID", StringComparison.OrdinalIgnoreCase)).Value?.FirstOrDefault();
         Assert.NotNull(correlationIdHeader);
 
         // Assert
-        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>().FirstOrDefault();
+        var publishedMessage = harness.Published.Select<PdfGenerationRequestedEvent>()
+            .LastOrDefault(m => m.Context.Message.CorrelationId == Guid.Parse(correlationIdHeader));
         Assert.NotNull(publishedMessage);
         var eventData = publishedMessage.Context.Message;
 

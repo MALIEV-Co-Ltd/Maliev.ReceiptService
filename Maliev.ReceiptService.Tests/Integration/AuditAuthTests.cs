@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Maliev.Aspire.ServiceDefaults.Testing;
 using Maliev.ReceiptService.Api.Services.IAM;
-using Maliev.ReceiptService.Tests.Fixtures;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 

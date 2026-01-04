@@ -3,36 +3,25 @@ using Maliev.ReceiptService.Data.Data;
 using Maliev.ReceiptService.Data.Models.Entities;
 using Maliev.ReceiptService.Data.Models.Enums;
 using Maliev.ReceiptService.Api.Services;
-using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Unit;
 
+[Collection("IntegrationTests")]
 public class ReceiptNumberGeneratorTests : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgresContainer;
+    private readonly TestWebApplicationFactory _factory;
     private ReceiptDbContext? _context;
 
-    public ReceiptNumberGeneratorTests()
+    public ReceiptNumberGeneratorTests(TestWebApplicationFactory factory)
     {
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18-alpine")
-            .WithDatabase("receipt_number_test")
-            .WithUsername("postgres")
-            .WithPassword("postgres")
-            .Build();
+        _factory = factory;
     }
 
     public async Task InitializeAsync()
     {
-        await _postgresContainer.StartAsync();
-
-        var options = new DbContextOptionsBuilder<ReceiptDbContext>()
-            .UseNpgsql(_postgresContainer.GetConnectionString())
-            .Options;
-
-        _context = new ReceiptDbContext(options);
-        await _context.Database.MigrateAsync();
+        _context = _factory.CreateDbContext();
+        await _context.Database.EnsureCreatedAsync(); // Ensure schema exists
     }
 
     public async Task DisposeAsync()
@@ -41,7 +30,7 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
         {
             await _context.DisposeAsync();
         }
-        await _postgresContainer.DisposeAsync();
+        await _factory.CleanDatabaseAsync();
     }
     [Fact]
     public async Task GenerateNextReceiptNumber_FirstReceiptOfYear_ReturnsCorrectFormat()

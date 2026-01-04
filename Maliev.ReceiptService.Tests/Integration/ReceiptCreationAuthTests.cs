@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 using Maliev.Aspire.ServiceDefaults.Testing;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Services.IAM;
-using Maliev.ReceiptService.Tests.Fixtures;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
+[Collection("IntegrationTests")]
 public class ReceiptCreationAuthTests
 {
     private readonly TestWebApplicationFactory _factory;
