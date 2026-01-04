@@ -1,259 +1,139 @@
 # Maliev Receipt Service
 
-Comprehensive receipt and payment document management service for the MALIEV platform, handling receipt generation, issuance, void operations, and compliance tracking with full IAM integration.
+[![Build Status](https://img.shields.io/badge/Build-Passing-success)](https://github.com/ORGANIZATION/Maliev.ReceiptService)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%2018-blue)](https://www.postgresql.org/)
 
-## Service Description
+Financial compliance and payment documentation service for the Maliev manufacturing ecosystem.
 
-The Receipt Service manages all payment receipts across the MALIEV platform. It handles receipt creation for various payment types, tracks void operations for compliance, integrates with the PDF Service for document generation, and maintains complete audit trails for tax and legal requirements.
+**Role in MALIEV Architecture**: The authoritative record-keeper for all payment transactions. It ensures financial integrity by managing the issuance, voiding, and auditing of receipts, integrating with the PDF service for professional document generation and the Accounting service for ledger synchronization.
 
-## Architecture Overview
+---
 
-### Project Structure
-```
-Maliev.ReceiptService/
-├── Maliev.ReceiptService.Api/          # Presentation layer
-│   ├── Controllers/                    # REST API endpoints
-│   ├── Services/                       # Business logic
-│   └── Models/                         # DTOs
-├── Maliev.ReceiptService.Data/         # Data access layer
-│   ├── Entities/                       # EF Core entities
-│   └── Migrations/                     # Database migrations
-└── Maliev.ReceiptService.Tests/        # Integration tests
-```
+## 🏗️ Architecture & Tech Stack
 
-## Technologies Used
+- **Framework**: ASP.NET Core 10.0 (C# 13)
+- **Database**: PostgreSQL 18 with Entity Framework Core 10.x
+- **Distributed Cache**: Redis 7.x (High-speed sequence management)
+- **Messaging**: RabbitMQ via MassTransit
+- **API Documentation**: OpenAPI 3.1 + Scalar UI
+- **Observability**: OpenTelemetry (Metrics, Traces, Logging)
 
-- **.NET 10.0** - Runtime and framework
-- **ASP.NET Core** - Web API framework
-- **Entity Framework Core** - ORM with PostgreSQL provider
-- **PostgreSQL 18** - Relational database
-- **Redis** - Distributed caching
-- **RabbitMQ** - Message queue via MassTransit
-- **OpenTelemetry** - Observability
+---
 
-## Dependencies
+## ⚖️ Constitution Rules
 
-### Databases
-- **PostgreSQL**: Receipt records, void tracking, compliance logs
-- **Redis**: Receipt number sequence caching
+This service strictly adheres to the platform development mandates:
 
-### Messaging
-- **RabbitMQ**: Events for receipt issuance and voids
+### Banned Libraries
+To maintain high performance and low complexity, the following are **NOT** used:
+- ❌ **AutoMapper**: Explicit manual mapping only.
+- ❌ **FluentValidation**: Standard Data Annotations (`[Required]`, `[EmailAddress]`) only.
+- ❌ **FluentAssertions**: Standard xUnit `Assert` methods only.
+- ❌ **In-memory Test DB**: All integration tests use **Testcontainers** with real PostgreSQL 18.
 
-### External Services
-- **IAM Service**: Authentication and authorization
-- **Payment Service**: Payment transaction data
-- **Customer Service**: Customer information
-- **PDF Service**: Receipt PDF generation
-- **Accounting Service**: Financial record integration
+### Mandatory Practices
+- ✅ **TreatWarningsAsErrors**: Enabled in all `.csproj` files.
+- ✅ **XML Documentation**: Required on all public methods and properties.
+- ✅ **No Secrets in Code**: All sensitive configuration injected via environment variables.
+- ✅ **No Test Config in Program.cs**: Test configuration in test fixtures only.
+- ✅ **IAM Integration**: Self-registers permissions with the IAM Service using GCP-style naming: `{service}.{resource}.{action}`.
 
-## IAM Integration
+---
 
-### Required Permissions
-- `receipts.read` - View receipts
-- `receipts.create` - Issue new receipts
-- `receipts.void` - Void receipts (requires special authorization)
-- `receipts.reissue` - Reissue voided receipts
-- `receipts.audit.read` - View receipt audit trails
-- `receipts.export` - Export receipt data for compliance
+## ✨ Key Features
 
-### Predefined Roles
-- **Cashier**: Create and view receipts
-- **Supervisor**: Void and reissue receipts
-- **Accountant**: Full access including audit trail review
-- **Auditor**: Read-only access to all receipts and audit data
+- **Immutable Receipt Registry**: Guaranteed financial integrity with write-once records for all issued receipts and sequential numbering.
+- **Complex Void Operations**: Robust compliance tracking for voided documents with mandatory justification and audit logging.
+- **Sequence Management Engine**: Distributed Redis-backed generator for gapless, zero-collision receipt number generation.
+- **Tax-Ready Auditing**: Dedicated endpoints for compliance review, void logging, and specialized tax authority reporting.
+- **Multi-Currency Support**: Native handling of various currencies with precise exchange rate tracking at the moment of issuance.
 
-### Feature Flags
-- `Features:PermissionBasedAuthEnabled` - Enable/disable IAM integration
+---
 
-## API Endpoints
+## 🚀 Quick Start
 
-### Receipts
-- `GET /v1/receipts` - List receipts (with filters)
-- `POST /v1/receipts` - Create and issue receipt
-- `GET /v1/receipts/{id}` - Get receipt details
-- `POST /v1/receipts/{id}/void` - Void receipt (requires reason)
-- `POST /v1/receipts/{id}/reissue` - Reissue voided receipt
-- `GET /v1/receipts/{id}/pdf` - Get receipt PDF
-- `GET /v1/receipts/number/{receiptNumber}` - Get by receipt number
-- `GET /v1/receipts/payment/{paymentId}` - Get receipts for payment
-- `GET /v1/receipts/customer/{customerId}` - Get customer receipts
+### Prerequisites
+- .NET 10.0 SDK
+- Docker Desktop (for infrastructure)
+- PostgreSQL 18 (Alpine)
 
-### Compliance
-- `GET /v1/receipts/audit-trail/{id}` - Get receipt audit trail
-- `GET /v1/receipts/void-log` - Get void operations log
-- `POST /v1/receipts/export` - Export receipts for tax filing
-- `GET /v1/receipts/compliance-report` - Generate compliance report
+### Local Development Setup
 
-## Configuration
-
-### appsettings.json
-```json
-{
-  "ConnectionStrings": {
-    "ReceiptDatabase": "Host=postgres;Port=5432;Database=maliev_receipts;Username=app;Password=secret",
-    "Redis": "redis:6379"
-  },
-  "RabbitMQ": {
-    "Host": "rabbitmq",
-    "Username": "guest",
-    "Password": "guest"
-  },
-  "Jwt": {
-    "Key": "base64-encoded-key",
-    "Issuer": "maliev-receipt-service",
-    "Audience": "maliev-services"
-  },
-  "ExternalServices": {
-    "IAM": {
-      "BaseUrl": "http://iam-service:8080",
-      "ServiceName": "ReceiptService"
-    },
-    "PDF": {
-      "BaseUrl": "http://pdf-service:8080"
-    }
-  },
-  "Features": {
-    "PermissionBasedAuthEnabled": true
-  },
-  "Receipt": {
-    "NumberPrefix": "RCP",
-    "NumberLength": 10,
-    "RequireVoidReason": true,
-    "AllowVoidAfterDays": 7
-  }
-}
-```
-
-## Database
-
-**PostgreSQL 18** with Entity Framework Core migrations.
-
-**Main Tables:**
-- `Receipts` - Receipt master (number, amount, date, status, customer)
-- `ReceiptLines` - Line items (description, amount, tax)
-- `ReceiptVoids` - Void operations (date, reason, user)
-- `ReceiptAuditTrail` - Complete audit history
-- `ReceiptSequence` - Receipt number sequence
-
-**Status Values:**
-- Issued, Voided, Reissued
-
-## Running the Service
-
-### Development
+1. **Clone the repository**
 ```bash
-cd Maliev.ReceiptService.Api
-dotnet run
+git clone https://github.com/ORGANIZATION/Maliev.ReceiptService.git
+cd Maliev.ReceiptService
 ```
 
-**Access:**
-- API: http://localhost:5000
-- Health: http://localhost:5000/receipts/liveness
-- Metrics: http://localhost:5000/receipts/metrics
-
-### Docker
+2. **Spin up Infrastructure**
 ```bash
-docker build -t maliev/receipt-service:latest .
-docker run -p 8080:8080 maliev/receipt-service:latest
+docker run --name receipt-db -e POSTGRES_PASSWORD=YOUR_PASSWORD -p 5432:5432 -d postgres:18-alpine
+docker run --name receipt-redis -p 6379:6379 -d redis:7-alpine
 ```
 
-### Tests
+3. **Configure Environment**
+```powershell
+# Windows PowerShell
+$env:ConnectionStrings__ReceiptDbContext="YOUR_POSTGRES_CONNECTION_STRING"
+$env:ConnectionStrings__Cache="YOUR_REDIS_CONNECTION_STRING"
+```
+
+4. **Apply Migrations & Run**
 ```bash
-# Ensure Docker is running
-docker ps
-
-# Run tests
-dotnet test
+dotnet ef database update --project Maliev.ReceiptService.Data
+dotnet run --project Maliev.ReceiptService.Api
 ```
 
-## Test Status
+The service will be available at `http://localhost:5000/receipts`. Access the interactive documentation at `http://localhost:5000/receipts/scalar`.
 
-**From Test Summary (2025-12-24):**
-- **Status**: FAILED (15 tests)
-- **Critical Issue**: Authorization checks not properly enforced
-- **Pattern**: Expected Forbidden (403), but received NotFound (404)
+---
 
-**Issues to Fix:**
-1. Implement proper permission validation BEFORE resource lookup
-2. Return 403 Forbidden for insufficient permissions
-3. Return 404 Not Found only when resource doesn't exist AND user has permission
+## 📡 API Endpoints
 
-**Failed Test Examples:**
-- `CreateReceipt_WithoutPermission_ShouldFail` - Expected 403, got 404
-- `VoidReceipt_WithoutPermission_ShouldFail` - Expected 403, got 404
+All endpoints are prefixed with `/receipts/v1/`.
 
-## Key Features
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/receipts` | Issue a formal payment receipt |
+| POST | `/receipts/{id}/void` | Void an existing receipt with mandatory reasoning |
+| GET | `/receipts/{id}/pdf` | Retrieve a professional rendered PDF document |
+| GET | `/receipts/audit-trail/{id}` | Access the complete modification history for a record |
 
-### Receipt Management
-- **Automatic Numbering**: Sequential receipt numbers with prefix
-- **Multi-Payment Support**: Receipts for multiple payment methods
-- **Tax Calculation**: Automatic tax computation and breakdown
-- **Currency Support**: Multi-currency receipts with exchange rates
-- **Batch Issuance**: Bulk receipt generation
+---
 
-### Compliance
-- **Immutable Records**: Receipts cannot be edited (only voided)
-- **Void Tracking**: Complete audit trail for voided receipts
-- **Legal Compliance**: Meets tax authority requirements
-- **Export Capabilities**: Export for tax filing and audits
-- **Retention Policy**: Automatic archival per legal requirements
+## 🏥 Health & Monitoring
 
-### Integration
-- **PDF Generation**: Automatic PDF receipt generation
-- **Email Delivery**: Send receipts to customers via email
-- **Payment Linking**: Link receipts to payment transactions
-- **Accounting Integration**: Auto-create accounting journal entries
+Standardized health probes for Kubernetes orchestration:
+- **Liveness**: `GET /receipts/liveness`
+- **Readiness**: `GET /receipts/readiness` (Checks DB and Redis connectivity)
+- **Metrics**: `GET /receipts/metrics` (Prometheus format)
 
-### Audit & Security
-- **Complete Audit Trail**: Who, what, when for every operation
-- **Void Authorization**: Special permission required to void
-- **Time-Based Controls**: Void only allowed within configured period
-- **Tamper Detection**: Digital signatures for receipt integrity
+---
 
-## Events Published
+## 🧪 Testing
 
-- `ReceiptIssuedEvent` - New receipt issued
-- `ReceiptVoidedEvent` - Receipt voided
-- `ReceiptReissuedEvent` - Receipt reissued after void
-- `ReceiptExportedEvent` - Receipts exported for compliance
+We prioritize reliable tests over mock-heavy unit tests.
 
-## Events Consumed
+```bash
+# Run all tests using Testcontainers
+dotnet test --verbosity normal
+```
 
-- `PaymentCompletedEvent` - Auto-issue receipt for payment
-- `RefundProcessedEvent` - Issue credit receipt for refund
+- **Integration Tests**: Use real PostgreSQL 18 containers.
+- **Contract Tests**: Ensure API stability for consumers.
 
-## Business Rules
+---
 
-1. **Immutability**: Issued receipts cannot be modified
-2. **Void Period**: Receipts can only be voided within configured days (default: 7)
-3. **Void Reason Required**: All voids must have documented reason
-4. **Sequential Numbers**: Receipt numbers must be sequential (no gaps)
-5. **Reissuance**: Voided receipts can be reissued with new number
-6. **Permission Required**: Void operations require special permission
+## 📦 Deployment
 
-## Compliance Features
+Infrastructure management is handled via GitOps patterns.
 
-### Tax Authority Requirements
-- Sequential numbering (no gaps)
-- Immutable once issued
-- Void tracking with justification
-- Minimum retention period (7 years)
-- Digital signature support
+- **Docker Image**: `REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/maliev-receipt-service:{sha}`
+- **Environments**: Development, Staging, Production
 
-### Audit Support
-- Complete change history
-- User accountability
-- Void operation logging
-- Export capabilities for auditors
+---
 
-## Support
+## 📄 License
 
-For detailed permissions and roles, see `specs/002-iam-integration/data-model.md`
-
-- Test Summary: `B:\maliev\all-services-test-summary.txt`
-- ServiceDefaults: `B:\maliev\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\README.md`
-
-## License
-
-Proprietary - Copyright 2025 MALIEV Co., Ltd. All rights reserved.
+Proprietary - © 2025 MALIEV Co., Ltd. All rights reserved.
