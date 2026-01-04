@@ -4,6 +4,7 @@ using Npgsql;
 using Maliev.ReceiptService.Data.Data;
 using Maliev.ReceiptService.Api.Events;
 using Maliev.ReceiptService.Api.Exceptions;
+using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Api.Extensions;
 using Maliev.ReceiptService.Api.Models.Dtos;
 using Maliev.ReceiptService.Data.Models.Entities;
@@ -88,24 +89,15 @@ public class ReceiptService : IReceiptService
 
         // Step 1a: For split invoices, validate segment and extract segment-specific data
         InvoiceSegmentDto? segment = null;
-        decimal validationSubtotal = invoice.Subtotal;
-        decimal validationTaxAmount = invoice.TaxAmount;
-        decimal validationTaxRate = invoice.VatRate;
-        List<InvoiceLineItemDto> validationLineItems = invoice.LineItems;
+        var validationLineItems = new List<InvoiceLineItemDto>();
+        decimal validationVatRate;
 
         if (request.InvoiceSegmentId.HasValue)
         {
-            segment = invoice.Segments.FirstOrDefault(s => s.SegmentId == request.InvoiceSegmentId.Value);
-            if (segment == null)
-            {
-                throw new InvalidOperationException(
-                    $"Segment {request.InvoiceSegmentId.Value} not found in invoice {request.InvoiceId}");
-            }
+            segment = invoice.Segments.FirstOrDefault(s => s.SegmentId == request.InvoiceSegmentId.Value)
+                ?? throw new InvalidOperationException("Invoice segment not found");
 
-            // Use segment-specific amounts and tax rate for validation
-            validationTaxRate = segment.SegmentTaxRate;
-            validationSubtotal = segment.SegmentAmount;
-            validationTaxAmount = segment.SegmentAmount * (segment.SegmentTaxRate / 100);
+            validationVatRate = segment.SegmentTaxRate;
 
             // Filter line items to only those belonging to this segment
             validationLineItems = invoice.LineItems
@@ -116,6 +108,11 @@ public class ReceiptService : IReceiptService
                 "Processing split invoice segment {SegmentId} ({SegmentName}): Amount={SegmentAmount}, TaxRate={SegmentTaxRate}%",
                 segment.SegmentId, segment.SegmentName, segment.SegmentAmount, segment.SegmentTaxRate);
         }
+        else
+        {
+            validationVatRate = invoice.VatRate;
+            validationLineItems = invoice.LineItems;
+        }
 
         // Step 2: Validate tax compliance
         var taxValidation = _taxValidator.ValidateReceipt(invoice, request);
@@ -124,7 +121,30 @@ public class ReceiptService : IReceiptService
             throw new TaxValidationException(taxValidation.Errors, string.Join(", ", taxValidation.Errors));
         }
 
+        // Calculate receipt financial components based on invoice/segment proportions
+        var totalSourceAmount = segment?.SegmentTotal ?? invoice.TotalAmount;
+        var ratio = totalSourceAmount > 0 ? request.Amount / totalSourceAmount : 0;
+
+        decimal receiptSubtotal;
+        decimal receiptTaxAmount;
+        decimal receiptWithholdingTaxAmount;
+
+        if (segment != null)
+        {
+            receiptSubtotal = Math.Round(segment.SegmentAmount * ratio, 2);
+            receiptTaxAmount = Math.Round((segment.SegmentAmount * (segment.SegmentTaxRate / 100)) * ratio, 2);
+            receiptWithholdingTaxAmount = 0; // Segments don't track WHT at segment level currently
+        }
+        else
+        {
+            receiptSubtotal = Math.Round(invoice.Subtotal * ratio, 2);
+            receiptTaxAmount = Math.Round(invoice.TaxAmount * ratio, 2);
+            receiptWithholdingTaxAmount = Math.Round((invoice.WithholdingTaxAmount ?? 0) * ratio, 2);
+        }
+
         // Step 3: Get or create balance tracker (segment-aware)
+        // Double check balance - prevent race conditions by checking it again before proceeding
+        // although the database constraint on RemainingBalance >= 0 will also catch this
         var trackerTotalAmount = segment?.SegmentTotal ?? invoice.TotalAmount;
         var balanceTracker = await GetOrCreateBalanceTrackerAsync(
             request.InvoiceId,
@@ -132,9 +152,9 @@ public class ReceiptService : IReceiptService
             request.InvoiceSegmentId);
 
         // Step 4: Validate receipt amount doesn't exceed remaining balance
-        if (request.Amount > balanceTracker.RemainingBalance)
+        if (balanceTracker.RemainingBalance < request.Amount)
         {
-            var segmentInfo = request.InvoiceSegmentId.HasValue ? $" (segment {request.InvoiceSegmentId.Value})" : "";
+            var segmentInfo = request.InvoiceSegmentId.HasValue ? $" for segment {request.InvoiceSegmentId}" : "";
             throw new OverReceiptingException(
                 request.InvoiceId,
                 request.Amount,
@@ -156,11 +176,11 @@ public class ReceiptService : IReceiptService
             CustomerName = invoice.CustomerName,
             CustomerTaxId = invoice.CustomerTaxId,
             CustomerAddress = invoice.CustomerAddress,
-            Subtotal = validationSubtotal,
-            TaxAmount = validationTaxAmount,
-            WithholdingTaxAmount = invoice.WithholdingTaxAmount,
+            Subtotal = receiptSubtotal,
+            TaxAmount = receiptTaxAmount,
+            WithholdingTaxAmount = receiptWithholdingTaxAmount,
             TotalAmount = request.Amount,
-            Currency = invoice.Currency,
+            Currency = invoice.Currency ?? "THB",
             PaymentMethod = request.PaymentMethod,
             Status = ReceiptStatus.PendingPdf,
             CreatedAt = DateTime.UtcNow,
@@ -169,14 +189,13 @@ public class ReceiptService : IReceiptService
             LineItems = validationLineItems.Select((li, index) => new ReceiptLineItem
             {
                 Id = Guid.NewGuid(),
-                ReceiptId = Guid.NewGuid(), // Will be set by EF Core
                 InvoiceLineItemId = li.Id,
                 LineNumber = index + 1,
                 Description = li.Description,
                 Quantity = li.Quantity,
                 UnitPrice = li.UnitPrice,
                 TaxRate = li.TaxRate,
-                LineTotal = li.LineTotal
+                LineTotal = Math.Round(li.LineTotal * ratio, 2)
             }).ToList()
         };
 
@@ -222,8 +241,36 @@ public class ReceiptService : IReceiptService
             "Receipt created: {ReceiptNumber} for invoice {InvoiceId}",
             receiptNumber, request.InvoiceId);
 
+        // Step 9.5: Publish ReceiptCreatedEvent
+        await _publishEndpoint.Publish(new MessagingContracts.Generated.ReceiptCreatedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "ReceiptCreatedEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "ReceiptService",
+            ConsumedBy: ["NotificationService", "AnalyticsService"],
+            CorrelationId: correlationId,
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new ReceiptCreatedEventPayload(
+                ReceiptId: receipt.Id,
+                ReceiptNumber: receipt.ReceiptNumber,
+                InvoiceId: receipt.InvoiceId,
+                CustomerName: receipt.CustomerName,
+                TotalAmount: (double)receipt.TotalAmount,
+                Currency: receipt.Currency,
+                PaymentMethod: receipt.PaymentMethod,
+                CreatedAt: new DateTimeOffset(receipt.IssueDate, TimeSpan.Zero)
+            )
+        ));
+
+        _logger.LogInformation(
+            "Published ReceiptCreatedEvent for receipt {ReceiptNumber}",
+            receiptNumber);
+
         // Step 10: Publish PDF generation event
-        var pdfEvent = new PdfGenerationRequestedEvent
+        var pdfEvent = new Maliev.ReceiptService.Api.Events.PdfGenerationRequestedEvent
         {
             ReceiptId = receipt.Id,
             ReceiptNumber = receipt.ReceiptNumber,
@@ -486,6 +533,31 @@ public class ReceiptService : IReceiptService
         // Step 6: Save changes
         await _context.SaveChangesAsync();
 
+        // Step 7: Publish ReceiptVoidedEvent
+        await _publishEndpoint.Publish(new MessagingContracts.Generated.ReceiptVoidedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "ReceiptVoidedEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "ReceiptService",
+            ConsumedBy: ["NotificationService", "AnalyticsService"],
+            CorrelationId: correlationId,
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new ReceiptVoidedEventPayload(
+                ReceiptId: receipt.Id,
+                ReceiptNumber: receipt.ReceiptNumber,
+                VoidedBy: staffId,
+                VoidedAt: new DateTimeOffset(receipt.VoidedAt ?? DateTime.UtcNow, TimeSpan.Zero),
+                VoidReason: reason
+            )
+        ));
+
+        _logger.LogInformation(
+            "Published ReceiptVoidedEvent for receipt {ReceiptNumber}",
+            receipt.ReceiptNumber);
+
         _logger.LogInformation(
             "Receipt {ReceiptNumber} voided successfully by {StaffId}, reason: {Reason}",
             receipt.ReceiptNumber, staffId, reason);
@@ -571,5 +643,78 @@ public class ReceiptService : IReceiptService
         }
 
         return tracker;
+    }
+
+    /// <summary>
+    /// Sends a receipt to a customer via specified channel
+    /// </summary>
+    public async Task<ReceiptResponse> SendReceiptAsync(
+        Guid receiptId,
+        string destination,
+        string channel,
+        string staffId,
+        Guid correlationId)
+    {
+        _logger.LogInformation(
+            "Sending receipt {ReceiptId} to {Destination} via {Channel}, staff: {StaffId}, correlation: {CorrelationId}",
+            receiptId, destination, channel, staffId, correlationId);
+
+        // Find receipt with line items
+        var receipt = await _context.Receipts
+            .Include(r => r.LineItems)
+            .FirstOrDefaultAsync(r => r.Id == receiptId);
+
+        if (receipt == null)
+        {
+            _logger.LogWarning("Receipt {ReceiptId} not found", receiptId);
+            throw new ReceiptNotFoundException(receiptId);
+        }
+
+        // Validate receipt is active and has PDF
+        if (receipt.Status != ReceiptStatus.Active)
+        {
+            _logger.LogWarning(
+                "Cannot send receipt {ReceiptNumber} with status {Status}",
+                receipt.ReceiptNumber, receipt.Status);
+            throw new ReceiptBusinessRuleException($"Cannot send receipt with status {receipt.Status}");
+        }
+
+        if (receipt.PdfReferenceId == null)
+        {
+            _logger.LogWarning(
+                "Receipt {ReceiptNumber} does not have a PDF generated yet",
+                receipt.ReceiptNumber);
+            throw new ReceiptBusinessRuleException("Receipt PDF has not been generated yet");
+        }
+
+        // Publish ReceiptSentEvent
+        await _publishEndpoint.Publish(new ReceiptSentEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "ReceiptSentEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "ReceiptService",
+            ConsumedBy: ["NotificationService"],
+            CorrelationId: correlationId,
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new ReceiptSentEventPayload(
+                ReceiptId: receipt.Id.ToString(),
+                ReceiptNumber: receipt.ReceiptNumber,
+                CustomerName: receipt.CustomerName,
+                SentTo: destination,
+                Channel: channel,
+                SentBy: staffId,
+                SentAt: DateTimeOffset.UtcNow
+            )
+        ));
+
+        _logger.LogInformation(
+            "ReceiptSentEvent published for receipt {ReceiptNumber}, sent to {Destination} via {Channel}",
+            receipt.ReceiptNumber, destination, channel);
+
+        // Return receipt response
+        return receipt.ToResponse();
     }
 }

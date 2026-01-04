@@ -262,6 +262,53 @@ public class ReceiptsController : ControllerBase
     }
 
     /// <summary>
+    /// Send a receipt to customer via specified channel
+    /// POST /v1/receipts/{id}/send
+    /// </summary>
+    [HttpPost("{id:guid}/send")]
+    [RequirePermission(ReceiptPermissions.Receipts.Send)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendReceipt(Guid id, [FromBody] SendReceiptRequest request)
+    {
+        // Get correlation ID from middleware
+        var correlationId = Guid.Parse(HttpContext.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString());
+
+        // Get staff ID from claims
+        var staffId = User.Identity?.Name ?? "system";
+
+        _logger.LogInformation(
+            "Sending receipt {ReceiptId} to {Destination} via {Channel}, correlation {CorrelationId}",
+            id, request.Destination, request.Channel, correlationId);
+
+        try
+        {
+            var receipt = await _receiptService.SendReceiptAsync(
+                id, request.Destination, request.Channel, staffId, correlationId);
+            return Ok(receipt);
+        }
+        catch (ReceiptNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Receipt not found: {ReceiptId}", id);
+            return NotFound(new
+            {
+                errorCode = "RECEIPT_NOT_FOUND",
+                message = ex.Message
+            });
+        }
+        catch (ReceiptBusinessRuleException ex)
+        {
+            _logger.LogWarning(ex, "Cannot send receipt {ReceiptId}: {Message}", id, ex.Message);
+            return BadRequest(new
+            {
+                errorCode = "INVALID_OPERATION",
+                message = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
     /// Get audit history for a receipt
     /// GET /v1/receipts/{id}/audit-history
     /// Task: T072 [P] [US3] Implement GET /v1/receipts/{id}/audit-history

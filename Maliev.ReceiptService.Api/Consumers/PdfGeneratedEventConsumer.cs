@@ -1,73 +1,89 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Maliev.ReceiptService.Data.Data;
-using Maliev.ReceiptService.Api.Events;
 using Maliev.ReceiptService.Data.Models.Entities;
 using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.MessagingContracts.Generated;
 
 namespace Maliev.ReceiptService.Api.Consumers;
 
 /// <summary>
-/// Consumes PdfGeneratedEvent from PDF Service to update receipt status
-/// Task: T106 [P] Create PdfGeneratedEventConsumer
-/// Per contracts/message-contracts.md - Consumed Events
+/// Consumes PdfGenerationCompletedEvent from PDF Service to update receipt status
 /// Handler Behavior:
-/// 1. Find receipt by receiptId
-/// 2. Update PdfReferenceId to pdfReferenceId
+/// 1. Find receipt by referenceId (receiptId)
+/// 2. Update PdfReferenceId from PDF generation requestId
 /// 3. Change Status from PendingPdf to Active
 /// 4. Create audit event (EventType = PdfGenerated)
+/// 5. Publish ReceiptGeneratedEvent
 /// </summary>
-public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
+public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
 {
     private readonly ReceiptDbContext _context;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<PdfGeneratedEventConsumer> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfGeneratedEventConsumer"/> class.
     /// </summary>
     /// <param name="context">The database context.</param>
+    /// <param name="publishEndpoint">The publish endpoint.</param>
     /// <param name="logger">The logger.</param>
     public PdfGeneratedEventConsumer(
         ReceiptDbContext context,
+        IPublishEndpoint publishEndpoint,
         ILogger<PdfGeneratedEventConsumer> logger)
     {
         _context = context;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
     /// <summary>
-    /// Consumes the <see cref="PdfGeneratedEvent"/>.
+    /// Consumes the <see cref="PdfGenerationCompletedEvent"/>.
     /// </summary>
     /// <param name="context">The consume context.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task Consume(ConsumeContext<PdfGeneratedEvent> context)
+    public async Task Consume(ConsumeContext<PdfGenerationCompletedEvent> context)
     {
-        var message = context.Message;
+        var payload = context.Message.Payload;
+
+        // ReferenceId contains the ReceiptId
+        if (!Guid.TryParse(payload.ReferenceId, out var receiptId))
+        {
+            _logger.LogError("Invalid ReferenceId format: {ReferenceId}", payload.ReferenceId);
+            return;
+        }
 
         _logger.LogInformation(
-            "PDF generated event received for receipt {ReceiptId}, PDF reference: {PdfReferenceId}, correlation: {CorrelationId}",
-            message.ReceiptId, message.PdfReferenceId, message.CorrelationId);
+            "PDF generation completed event received for receipt {ReceiptId}, Request: {RequestId}, Storage: {StorageUrl}",
+            receiptId, payload.RequestId, payload.StorageUrl);
 
-        // Step 1: Find receipt by receiptId
+        // Step 1: Find receipt by referenceId (receiptId)
         var receipt = await _context.Receipts
-            .FirstOrDefaultAsync(r => r.Id == message.ReceiptId);
+            .FirstOrDefaultAsync(r => r.Id == receiptId);
 
         if (receipt == null)
         {
             _logger.LogWarning(
                 "Receipt {ReceiptId} not found for PDF generated event, correlation: {CorrelationId}",
-                message.ReceiptId, message.CorrelationId);
+                receiptId, context.Message.CorrelationId);
             return; // Idempotent - receipt might have been deleted
         }
 
         // Step 2 & 3: Update PdfReferenceId and change status
         var previousStatus = receipt.Status;
-        receipt.PdfReferenceId = message.PdfReferenceId;
+
+        // Store the PDF generation requestId as the reference
+        if (Guid.TryParse(payload.RequestId, out var pdfRequestId))
+        {
+            receipt.PdfReferenceId = pdfRequestId;
+        }
+
         receipt.Status = ReceiptStatus.Active;
 
         _logger.LogInformation(
-            "Updating receipt {ReceiptNumber} status from {PreviousStatus} to {NewStatus}, PDF reference: {PdfReferenceId}",
-            receipt.ReceiptNumber, previousStatus, receipt.Status, message.PdfReferenceId);
+            "Updating receipt {ReceiptNumber} status from {PreviousStatus} to {NewStatus}, PDF storage: {StorageUrl}",
+            receipt.ReceiptNumber, previousStatus, receipt.Status, payload.StorageUrl);
 
         // Step 4: Create audit event
         var auditEvent = new ReceiptAuditEvent
@@ -77,7 +93,7 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
             EventType = AuditEventType.PdfGenerated,
             Timestamp = DateTime.UtcNow,
             StaffMemberId = "system", // PDF generation is system-initiated
-            Reason = $"PDF generated successfully, reference: {message.PdfReferenceId}",
+            Reason = $"PDF generated successfully, storage: {payload.StorageUrl}",
             PreviousState = System.Text.Json.JsonSerializer.Serialize(new
             {
                 receipt.Id,
@@ -90,9 +106,10 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
                 receipt.Id,
                 receipt.ReceiptNumber,
                 receipt.Status,
-                receipt.PdfReferenceId
+                receipt.PdfReferenceId,
+                StorageUrl = payload.StorageUrl
             }),
-            CorrelationId = message.CorrelationId,
+            CorrelationId = context.Message.CorrelationId,
             RetainUntil = DateTime.UtcNow.AddYears(7)
         };
 
@@ -101,8 +118,29 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGeneratedEvent>
         // Save changes
         await _context.SaveChangesAsync();
 
+        // Step 5: Publish ReceiptGeneratedEvent
+        await _publishEndpoint.Publish(new ReceiptGeneratedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "ReceiptGeneratedEvent",
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "ReceiptService",
+            ConsumedBy: ["NotificationService", "AnalyticsService"],
+            CorrelationId: context.Message.CorrelationId,
+            CausationId: context.Message.MessageId,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new ReceiptGeneratedEventPayload(
+                ReceiptId: receipt.Id.ToString(),
+                ReceiptNumber: receipt.ReceiptNumber,
+                StorageUrl: payload.StorageUrl,
+                PdfReferenceId: receipt.PdfReferenceId?.ToString() ?? payload.RequestId,
+                GeneratedAt: DateTimeOffset.UtcNow
+            )
+        ));
+
         _logger.LogInformation(
-            "PDF callback processed successfully for receipt {ReceiptNumber}, status: {Status}, PDF: {PdfUrl}",
-            receipt.ReceiptNumber, receipt.Status, message.UploadServiceUrl);
+            "PDF callback processed and ReceiptGeneratedEvent published for receipt {ReceiptNumber}, status: {Status}, storage: {StorageUrl}",
+            receipt.ReceiptNumber, receipt.Status, payload.StorageUrl);
     }
 }

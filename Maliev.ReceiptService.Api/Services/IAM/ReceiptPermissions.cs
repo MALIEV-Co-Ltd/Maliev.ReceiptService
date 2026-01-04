@@ -19,6 +19,8 @@ public static class ReceiptPermissions
         public const string Update = "Permission:receipt.receipts.update";
         /// <summary>Permission to void a receipt.</summary>
         public const string Void = "Permission:receipt.receipts.void";
+        /// <summary>Permission to send a receipt to customer.</summary>
+        public const string Send = "Permission:receipt.receipts.send";
         /// <summary>Permission to query receipts.</summary>
         public const string Query = "Permission:receipt.receipts.query";
         /// <summary>Permission to export receipts.</summary>
@@ -58,6 +60,7 @@ public static class ReceiptPermissions
         Receipts.Read,
         Receipts.Update,
         Receipts.Void,
+        Receipts.Send,
         Receipts.Query,
         Receipts.Export,
         PartialPayments.Create,

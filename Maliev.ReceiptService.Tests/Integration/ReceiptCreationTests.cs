@@ -24,7 +24,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         // Arrange
         var request = new
         {
-            invoiceId = "550e8400-e29b-41d4-a716-446655440000",
+            invoiceId = Guid.NewGuid().ToString(),
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };
@@ -107,7 +107,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_UpdatesInvoiceBalanceTracker()
     {
         // Arrange
-        var invoiceId = "770e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
         var request = new
         {
             invoiceId = invoiceId,
@@ -143,7 +143,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         // Arrange
         var request = new
         {
-            invoiceId = "880e8400-e29b-41d4-a716-446655440000",
+            invoiceId = Guid.NewGuid().ToString(),
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };
@@ -221,7 +221,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         // Arrange
         var request = new
         {
-            invoiceId = "dd0e8400-e29b-41d4-a716-446655440000",
+            invoiceId = Guid.NewGuid().ToString(),
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };
@@ -289,7 +289,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         // Arrange
         var request = new
         {
-            invoiceId = "ff0e8400-e29b-41d4-a716-446655440000",
+            invoiceId = Guid.NewGuid().ToString(),
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };

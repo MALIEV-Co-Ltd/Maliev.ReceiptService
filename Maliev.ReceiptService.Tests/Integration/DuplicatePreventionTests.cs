@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using Maliev.ReceiptService.Api.Models.Requests;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
@@ -55,7 +56,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_WithAmountExceedingBalance_Rejected()
     {
         // Arrange - Create partial receipt
-        var invoiceId = "660e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
         var firstRequest = new
         {
             invoiceId = invoiceId,
@@ -95,7 +96,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_ConcurrentRequestsForSameInvoice_OnlyOneSucceeds()
     {
         // Arrange
-        var invoiceId = "770e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
 
         // Act - Create 5 concurrent receipt requests for full amount
         var tasks = new List<Task<HttpResponseMessage>>();
@@ -125,7 +126,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_MultiplePartialPayments_AcceptedUntilFullyPaid()
     {
         // Arrange
-        var invoiceId = "880e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
 
         // Act - Create 3 partial receipts
         var receipt1 = await CreateReceiptAsync(invoiceId, 300.00m);
@@ -145,8 +146,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     [Fact]
     public async Task CreateReceipt_BalanceTracking_UpdatedCorrectlyAfterEachReceipt()
     {
-        // Arrange
-        var invoiceId = "990e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
 
         // Act & Assert - Create receipts and track balance
         var receipt1 = await CreateReceiptAsync(invoiceId, 200.00m);
@@ -213,16 +213,16 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     [Fact]
     public async Task CreateReceipt_AfterVoid_BalanceRestored()
     {
-        // Arrange - Create receipt
-        var invoiceId = "bb0e8400-e29b-41d4-a716-446655440000";
-        var createRequest = new
+        // Arrange
+        var invoiceId = Guid.NewGuid().ToString();
+        var request = new CreateReceiptRequest
         {
-            invoiceId = invoiceId,
-            amount = 1070.00m,
-            paymentMethod = "Bank Transfer"
+            InvoiceId = Guid.Parse(invoiceId),
+            Amount = 1070.00m,
+            PaymentMethod = "Bank Transfer"
         };
 
-        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
+        var createResponse = await Client.PostAsJsonAsync("/receipt/v1/receipts", request);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createDoc = JsonDocument.Parse(createContent);
         var receiptId = createDoc.RootElement.GetProperty("id").GetString();
@@ -253,9 +253,9 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_DuplicateDetection_WorksAcrossMultipleInvoices()
     {
         // Arrange & Act - Create receipts for different invoices
-        var invoice1 = "cc0e8400-e29b-41d4-a716-446655440000";
-        var invoice2 = "dd0e8400-e29b-41d4-a716-446655440000";
-        var invoice3 = "ee0e8400-e29b-41d4-a716-446655440000";
+        var invoice1 = Guid.NewGuid().ToString();
+        var invoice2 = Guid.NewGuid().ToString();
+        var invoice3 = Guid.NewGuid().ToString();
 
         var receipt1 = await CreateReceiptAsync(invoice1, 1070.00m);
         var receipt2 = await CreateReceiptAsync(invoice2, 1070.00m);
@@ -280,7 +280,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_WithExactRemainingBalance_Succeeds()
     {
         // Arrange - Create partial receipt
-        var invoiceId = "ff0e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
 
         await CreateReceiptAsync(invoiceId, 600.00m);
 
@@ -299,7 +299,7 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     public async Task CreateReceipt_DuplicatePrevention_IncludesCorrelationIdInError()
     {
         // Arrange - Create first receipt
-        var invoiceId = "ab0e8400-e29b-41d4-a716-446655440000";
+        var invoiceId = Guid.NewGuid().ToString();
         await CreateReceiptAsync(invoiceId, 1070.00m);
 
         // Act - Try duplicate
@@ -315,8 +315,8 @@ public class DuplicatePreventionTests : BaseReceiptIntegrationTest
     [Fact]
     public async Task CreateReceipt_BalanceTracker_CreatedOnFirstReceipt()
     {
-        // Arrange & Act
-        var invoiceId = "cd0e8400-e29b-41d4-a716-446655440000";
+        // Arrange
+        var invoiceId = Guid.NewGuid().ToString();
         var response = await CreateReceiptAsync(invoiceId, 500.00m);
 
         // Assert
