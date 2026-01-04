@@ -145,7 +145,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Set environment variables BEFORE host builder processes configuration
-        // Using builder.UseSetting is more reliable than Environment.SetEnvironmentVariable 
+        // Using builder.UseSetting is more reliable than Environment.SetEnvironmentVariable
         // because it injects directly into the WebHost configuration that Program.cs reads.
         builder.UseSetting($"ConnectionStrings:{DbConnectionStringName}", _postgresContainer.GetConnectionString());
         builder.UseSetting("ConnectionStrings:redis", _redisContainer.GetConnectionString());
@@ -207,6 +207,21 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 // Clear SignatureValidator to ensure proper JWT validation and claim mapping
                 options.TokenValidationParameters.SignatureValidator = null;
             });
+
+            // Add MassTransit test harness
+            services.AddMassTransitTestHarness();
+
+            // Infrastructure background services (MassTransit, IAM registration) are kept
+            // to ensure health checks pass.
+            var hostedServices = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
+            foreach (var service in hostedServices)
+            {
+                var typeName = service.ImplementationType?.Name ??
+                              service.ImplementationFactory?.Method.ReturnType.Name ?? "";
+
+                // Add any domain-specific background services here if they interfere with tests
+                // if (typeName.Contains("SomeHeavyDomainService")) { services.Remove(service); }
+            }
 
             // Allow derived classes to add additional test services
             ConfigureAdditionalServices(services);
