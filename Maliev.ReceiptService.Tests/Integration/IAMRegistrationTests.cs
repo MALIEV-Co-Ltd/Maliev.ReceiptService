@@ -27,11 +27,11 @@ public class IAMRegistrationTests
     [Fact]
     public void PredefinedRoles_ShouldBeDefined()
     {
-        var roles = ReceiptPredefinedRoles.GetRoles().ToList();
+        var roles = ReceiptPredefinedRoles.All;
         Assert.NotEmpty(roles);
-        Assert.Contains(roles, r => r.RoleId == "roles.receipt.admin");
-        Assert.Contains(roles, r => r.RoleId == "roles.receipt.manager");
-        Assert.Contains(roles, r => r.RoleId == "roles.receipt.creator");
+        Assert.Contains(roles, r => r.RoleId == ReceiptPredefinedRoles.Admin);
+        Assert.Contains(roles, r => r.RoleId == ReceiptPredefinedRoles.Manager);
+        Assert.Contains(roles, r => r.RoleId == ReceiptPredefinedRoles.Creator);
     }
 
     [Fact]

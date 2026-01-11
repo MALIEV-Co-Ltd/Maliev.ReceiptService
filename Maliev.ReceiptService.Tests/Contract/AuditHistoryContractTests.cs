@@ -44,12 +44,14 @@ public class AuditHistoryContractTests : IAsyncLifetime
         };
 
         var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
         // Void the receipt to create more audit events
         var voidRequest = new VoidReceiptRequest { Reason = "Test audit trail" };
-        await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
+        var voidResponse = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
+        Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
 
         // Act
         var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
@@ -110,6 +112,7 @@ public class AuditHistoryContractTests : IAsyncLifetime
         };
 
         var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -117,7 +120,8 @@ public class AuditHistoryContractTests : IAsyncLifetime
         await Task.Delay(100);
 
         var voidRequest = new VoidReceiptRequest { Reason = "Chronological test" };
-        await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
+        var voidResponse = await _client.PostAsJsonAsync($"/receipt/v1/receipts/{receipt.Id}/void", voidRequest);
+        Assert.Equal(HttpStatusCode.OK, voidResponse.StatusCode);
 
         // Act
         var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
@@ -161,6 +165,7 @@ public class AuditHistoryContractTests : IAsyncLifetime
         };
 
         var createResponse = await _client.PostAsJsonAsync("/receipt/v1/receipts", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var receipt = await createResponse.Content.ReadFromJsonAsync<ReceiptResponse>();
         Assert.NotNull(receipt);
 
@@ -168,6 +173,7 @@ public class AuditHistoryContractTests : IAsyncLifetime
         var response = await _client.GetAsync($"/receipt/v1/receipts/{receipt.Id}/audit-history");
 
         // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var auditEvents = await response.Content.ReadFromJsonAsync<List<AuditEvent>>();
         Assert.NotNull(auditEvents);
         Assert.NotEmpty(auditEvents);
