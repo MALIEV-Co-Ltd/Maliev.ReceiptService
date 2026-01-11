@@ -1,69 +1,62 @@
-## .NET Build artifacts
+# Build results
 bin/
 obj/
-artifacts/
 out/
+artifacts/
 
-## User-specific files
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-## IDE files
+# IDE files
 .vs/
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+_ReSharperCache/
+*.DotSettings.user
 
-## Test results
-TestResults/
-*.trx
-*.coverage
-*.coveragexml
-
-## NuGet
+# NuGet Packages
 *.nupkg
 *.snupkg
 .nuget/
 !nuget.config
 
-## Logs
-logs/
-*.log
-
-## OS files
-.DS_Store
-Thumbs.db
-
-## Environment files
+# Environment & Secrets
 .env
 .env.local
 *.local.settings.json
+appsettings.Local.json
 
-## Database
+# OS files
+.DS_Store
+Thumbs.db
+NUL
+
+# Temporary & Logs
+*.log
+logs/
+
+# Test Artifacts
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*test-output.txt
+*_error.txt
+
+# Repository Specific
+.claude/settings.local.json
+.gemini/settings.local.json
+
+# Database
 *.db
 *.db-shm
 *.db-wal
 
-## Rider
-_ReSharperCache/
-*.DotSettings.user
-
-.claude/settings.local.json
-.gemini/settings.local.json
-
-# Test Outputs
-*test-output.txt
-*_error.txt
-
-
-# Test Outputs
-*test-output.txt
-*_error.txt
-
-
-# Windows NUL device file (accidentally created by redirects)
-NUL
+# Enforced Rules (User Request)
+appsettings.Development.json
+docker-compose*.yml
+docker-compose.override.yml

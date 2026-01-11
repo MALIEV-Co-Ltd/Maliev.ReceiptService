@@ -31,18 +31,18 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
     {
         base.ConfigureEnvironmentVariables();
         // Environment variables are still set for non-web components that might read them
-        Environment.SetEnvironmentVariable("InvoiceService__BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
-        Environment.SetEnvironmentVariable("IAM__BaseUrl", _invoiceServiceMock.Urls[0]);
+        Environment.SetEnvironmentVariable("Services__InvoiceService__BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
+        Environment.SetEnvironmentVariable("Services__IAM__BaseUrl", _invoiceServiceMock.Urls[0]);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
 
-        // Configure HttpClient base URL for InvoiceService with /v1/ path and trailing slash
+        // Configure HttpClient base URL for InvoiceService
         // Using builder.UseSetting is more reliable than Environment.SetEnvironmentVariable
-        builder.UseSetting("InvoiceService:BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
-        builder.UseSetting("IAM:BaseUrl", _invoiceServiceMock.Urls[0]);
+        builder.UseSetting("Services:InvoiceService:BaseUrl", $"{_invoiceServiceMock.Urls[0]}/v1/");
+        builder.UseSetting("Services:IAM:BaseUrl", _invoiceServiceMock.Urls[0]);
     }
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)

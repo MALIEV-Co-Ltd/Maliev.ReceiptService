@@ -1,6 +1,7 @@
-using Maliev.ReceiptService.Api.Services;
-using Maliev.ReceiptService.Data.Data;
 using Maliev.Aspire.ServiceDefaults;
+using Maliev.ReceiptService.Api.Services;
+using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Data.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +51,7 @@ if (!builder.Environment.IsProduction())
 builder.Services.AddControllers();
 
 // Register Metrics
-var meter = new System.Diagnostics.Metrics.Meter("receipts");
+var meter = new System.Diagnostics.Metrics.Meter("receipts-meter");
 var receiptsCreatedCounter = meter.CreateCounter<long>("receipts.created.total", "receipts", "Total number of receipts created");
 var creationDurationHistogram = meter.CreateHistogram<double>("receipts.creation.duration", "milliseconds", "Receipt creation duration");
 builder.Services.AddSingleton(receiptsCreatedCounter);
@@ -63,8 +64,8 @@ builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.R
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // IAM Integration
-builder.Services.AddIAMClient(builder.Configuration, "ReceiptService");
-builder.Services.AddIAMRegistration<Maliev.ReceiptService.Api.Services.IAM.ReceiptIAMRegistrationService>();
+builder.AddIAMServiceClient("receipt");
+builder.Services.AddIAMRegistration<ReceiptIAMRegistrationService>("receipt");
 
 // External Service Clients with Polly v8 Resilience
 builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceService");
@@ -77,7 +78,10 @@ await app.MigrateDatabaseAsync<ReceiptDbContext>();
 
 // Middleware Pipeline
 app.UseStandardMiddleware();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors();
 
 app.UseAuthentication();
