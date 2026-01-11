@@ -1,72 +1,69 @@
 namespace Maliev.ReceiptService.Api.Services.IAM;
 
 /// <summary>
-/// Defines all permission strings for the ReceiptService.
-/// Note: Constants include "Permission:" prefix for integration with ServiceDefaults policy provider.
+/// Defines permission constants for the Receipt Service.
+/// Follows GCP-style naming: {service}.{resource}.{action}
 /// </summary>
 public static class ReceiptPermissions
 {
-    /// <summary>
-    /// Permissions for receipt operations.
-    /// </summary>
+    /// <summary>Permissions for receipt operations.</summary>
     public static class Receipts
     {
-        /// <summary>Permission to create a receipt.</summary>
-        public const string Create = "Permission:receipt.receipts.create";
-        /// <summary>Permission to read a receipt.</summary>
-        public const string Read = "Permission:receipt.receipts.read";
-        /// <summary>Permission to update a receipt.</summary>
-        public const string Update = "Permission:receipt.receipts.update";
-        /// <summary>Permission to void a receipt.</summary>
-        public const string Void = "Permission:receipt.receipts.void";
-        /// <summary>Permission to send a receipt to customer.</summary>
-        public const string Send = "Permission:receipt.receipts.send";
+        /// <summary>Permission to create receipts.</summary>
+        public const string Create = "receipt.receipts.create";
+        /// <summary>Permission to read receipts.</summary>
+        public const string Read = "receipt.receipts.read";
+        /// <summary>Permission to update receipts.</summary>
+        public const string Update = "receipt.receipts.update";
+        /// <summary>Permission to void receipts.</summary>
+        public const string Void = "receipt.receipts.void";
+        /// <summary>Permission to send receipts.</summary>
+        public const string Send = "receipt.receipts.send";
         /// <summary>Permission to query receipts.</summary>
-        public const string Query = "Permission:receipt.receipts.query";
+        public const string Query = "receipt.receipts.query";
         /// <summary>Permission to export receipts.</summary>
-        public const string Export = "Permission:receipt.receipts.export";
+        public const string Export = "receipt.receipts.export";
     }
 
-    /// <summary>
-    /// Permissions for partial payment operations.
-    /// </summary>
+    /// <summary>Permissions for partial payment operations.</summary>
     public static class PartialPayments
     {
-        /// <summary>Permission to create a partial payment.</summary>
-        public const string Create = "Permission:receipt.partial-payments.create";
-        /// <summary>Permission to read a partial payment.</summary>
-        public const string Read = "Permission:receipt.partial-payments.read";
+        /// <summary>Permission to create partial payments.</summary>
+        public const string Create = "receipt.partial-payments.create";
+        /// <summary>Permission to read partial payments.</summary>
+        public const string Read = "receipt.partial-payments.read";
         /// <summary>Permission to manage partial payments.</summary>
-        public const string Manage = "Permission:receipt.partial-payments.manage";
+        public const string Manage = "receipt.partial-payments.manage";
     }
 
-    /// <summary>
-    /// Permissions for audit operations.
-    /// </summary>
+    /// <summary>Permissions for audit operations.</summary>
     public static class Audit
     {
         /// <summary>Permission to read audit logs.</summary>
-        public const string Read = "Permission:receipt.audit.read";
+        public const string Read = "receipt.audit.read";
         /// <summary>Permission to export audit logs.</summary>
-        public const string Export = "Permission:receipt.audit.export";
+        public const string Export = "receipt.audit.export";
     }
 
     /// <summary>
-    /// Gets all defined permissions.
+    /// Collection of all defined receipt permissions with descriptions.
     /// </summary>
-    public static IEnumerable<string> All => new[]
+    public static readonly IReadOnlyDictionary<string, string> AllWithDescriptions = new Dictionary<string, string>
     {
-        Receipts.Create,
-        Receipts.Read,
-        Receipts.Update,
-        Receipts.Void,
-        Receipts.Send,
-        Receipts.Query,
-        Receipts.Export,
-        PartialPayments.Create,
-        PartialPayments.Read,
-        PartialPayments.Manage,
-        Audit.Read,
-        Audit.Export
+        { Receipts.Create, "Create new receipts" },
+        { Receipts.Read, "Read receipt details" },
+        { Receipts.Update, "Update receipt information" },
+        { Receipts.Void, "Void receipts" },
+        { Receipts.Send, "Send receipt to customer" },
+        { Receipts.Query, "Query receipt history" },
+        { Receipts.Export, "Export receipt data" },
+        { PartialPayments.Create, "Create partial payment records" },
+        { PartialPayments.Read, "Read partial payment details" },
+        { PartialPayments.Manage, "Update/Delete partial payments" },
+        { Audit.Read, "Read receipt audit logs" },
+        { Audit.Export, "Export audit data" }
     };
+
+    /// <summary>All available permission codes</summary>
+    public static IEnumerable<string> All => AllWithDescriptions.Keys;
 }
