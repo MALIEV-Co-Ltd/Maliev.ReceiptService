@@ -150,6 +150,11 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         builder.UseSetting($"ConnectionStrings:{DbConnectionStringName}", _postgresContainer.GetConnectionString());
         builder.UseSetting("ConnectionStrings:redis", _redisContainer.GetConnectionString());
         builder.UseSetting("ConnectionStrings:rabbitmq", _rabbitmqContainer.GetConnectionString());
+
+        // Use a dynamically generated key for testing to avoid hardcoded secrets
+        var dynamicKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        builder.UseSetting("Jwt:SecurityKey", dynamicKey);
+
         builder.UseSetting("Features:PermissionBasedAuthEnabled", "true");
 
         builder.ConfigureTestServices(services =>

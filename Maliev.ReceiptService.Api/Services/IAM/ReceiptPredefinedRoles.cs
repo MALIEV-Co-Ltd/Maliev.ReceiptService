@@ -1,80 +1,64 @@
-using Maliev.Aspire.ServiceDefaults.IAM;
-
 namespace Maliev.ReceiptService.Api.Services.IAM;
 
 /// <summary>
-/// Defines predefined roles for the Receipt Service.
+/// Predefined roles for the Receipt Service.
 /// </summary>
 public static class ReceiptPredefinedRoles
 {
+    /// <summary>Full access to all receipt operations.</summary>
+    public const string Admin = "roles.receipt.admin";
+    /// <summary>Operational access to manage receipts.</summary>
+    public const string Manager = "roles.receipt.manager";
+    /// <summary>Can create and manage own receipts.</summary>
+    public const string Creator = "roles.receipt.creator";
+    /// <summary>Read-only access to receipts.</summary>
+    public const string Viewer = "roles.receipt.viewer";
+    /// <summary>Focused on auditing and reporting.</summary>
+    public const string Auditor = "roles.receipt.auditor";
+
     /// <summary>
-    /// Gets the list of predefined roles.
+    /// Collection of all predefined roles for the Receipt Service.
     /// </summary>
-    /// <returns>A collection of role registrations.</returns>
-    public static IEnumerable<RoleRegistration> GetRoles()
+    public static readonly IReadOnlyList<(string RoleId, string Description, string[] Permissions)> All = new List<(string, string, string[])>
     {
-        yield return new RoleRegistration
-        {
-            RoleId = "roles.receipt.admin",
-            Description = "Full access to all receipt service operations",
-            PermissionIds = ReceiptPermissions.All.ToList()
-        };
+        (Admin, "Full access to all receipt service operations", ReceiptPermissions.All.ToArray()),
 
-        yield return new RoleRegistration
+        (Manager, "Manage receipts and payments, but cannot export audit logs", new[]
         {
-            RoleId = "roles.receipt.manager",
-            Description = "Manage receipts and payments, but cannot export audit logs",
-            PermissionIds = new List<string>
-            {
-                ReceiptPermissions.Receipts.Create,
-                ReceiptPermissions.Receipts.Read,
-                ReceiptPermissions.Receipts.Update,
-                ReceiptPermissions.Receipts.Void,
-                ReceiptPermissions.Receipts.Query,
-                ReceiptPermissions.Receipts.Export,
-                ReceiptPermissions.PartialPayments.Create,
-                ReceiptPermissions.PartialPayments.Read,
-                ReceiptPermissions.PartialPayments.Manage,
-                ReceiptPermissions.Audit.Read
-            }
-        };
+            ReceiptPermissions.Receipts.Create,
+            ReceiptPermissions.Receipts.Read,
+            ReceiptPermissions.Receipts.Update,
+            ReceiptPermissions.Receipts.Void,
+            ReceiptPermissions.Receipts.Query,
+            ReceiptPermissions.Receipts.Export,
+            ReceiptPermissions.Receipts.Send,
+            ReceiptPermissions.PartialPayments.Create,
+            ReceiptPermissions.PartialPayments.Read,
+            ReceiptPermissions.PartialPayments.Manage,
+            ReceiptPermissions.Audit.Read
+        }),
 
-        yield return new RoleRegistration
+        (Creator, "Can create and read receipts and payments", new[]
         {
-            RoleId = "roles.receipt.creator",
-            Description = "Can create and read receipts and payments",
-            PermissionIds = new List<string>
-            {
-                ReceiptPermissions.Receipts.Create,
-                ReceiptPermissions.Receipts.Read,
-                ReceiptPermissions.PartialPayments.Create,
-                ReceiptPermissions.PartialPayments.Read
-            }
-        };
+            ReceiptPermissions.Receipts.Create,
+            ReceiptPermissions.Receipts.Read,
+            ReceiptPermissions.PartialPayments.Create,
+            ReceiptPermissions.PartialPayments.Read
+        }),
 
-        yield return new RoleRegistration
+        (Viewer, "Read-only access to receipts", new[]
         {
-            RoleId = "roles.receipt.viewer",
-            Description = "Read-only access to receipts",
-            PermissionIds = new List<string>
-            {
-                ReceiptPermissions.Receipts.Read,
-                ReceiptPermissions.PartialPayments.Read
-            }
-        };
+            ReceiptPermissions.Receipts.Read,
+            ReceiptPermissions.PartialPayments.Read
+        }),
 
-        yield return new RoleRegistration
+        (Auditor, "Access to view and export receipts and audit logs", new[]
         {
-            RoleId = "roles.receipt.auditor",
-            Description = "Access to view and export receipts and audit logs",
-            PermissionIds = new List<string>
-            {
-                ReceiptPermissions.Receipts.Read,
-                ReceiptPermissions.Receipts.Query,
-                ReceiptPermissions.Receipts.Export,
-                ReceiptPermissions.Audit.Read,
-                ReceiptPermissions.Audit.Export
-            }
-        };
-    }
+            ReceiptPermissions.Receipts.Read,
+            ReceiptPermissions.Receipts.Query,
+            ReceiptPermissions.Receipts.Export,
+            ReceiptPermissions.Audit.Read,
+            ReceiptPermissions.Audit.Export
+        })
+    };
 }
