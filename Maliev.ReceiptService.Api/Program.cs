@@ -2,102 +2,121 @@ using Maliev.Aspire.ServiceDefaults;
 using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
 using Maliev.ReceiptService.Data.Data;
+using Microsoft.Extensions.Logging;
 
-var builder = WebApplication.CreateBuilder(args);
+// Initialize bootstrap logging
+using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
+var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
-// --- Secrets & Configuration ---
-builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
-
-// --- Infrastructure & Observability ---
-builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddStandardMiddleware(options =>
+try
 {
-    options.EnableRequestLogging = true;
-});
-builder.AddServiceMeters("receipts-meter", "receipts-auth-meter"); // Register service meters for OpenTelemetry business metrics
+    bootstrapLogger.LogInformation("Starting Receipt Service host");
 
-builder.Services.AddSingleton<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>();
-builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
-    sp.GetRequiredService<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>());
+    var builder = WebApplication.CreateBuilder(args);
 
-// Database Context with ServiceDefaults (skip in Testing environment - handled by test factory)
-builder.AddPostgresDbContext<ReceiptDbContext>(connectionName: "ReceiptDbContext");
+    // --- Secrets & Configuration ---
+    builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if available
 
-builder.AddRedisDistributedCache(instanceName: "receipt:"); // Redis with in-memory fallback
+    // --- Infrastructure & Observability ---
+    builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+    builder.AddStandardMiddleware(options =>
+    {
+        options.EnableRequestLogging = true;
+    });
+    builder.AddServiceMeters("receipts-meter", "receipts-auth-meter"); // Register service meters for OpenTelemetry business metrics
 
-// MassTransit with RabbitMQ - register consumers
-builder.AddMassTransitWithRabbitMq(configurator =>
-{
-    // Register PDF callback consumer
-    configurator.AddConsumer<Maliev.ReceiptService.Api.Consumers.PdfGeneratedEventConsumer>();
-});
+    builder.Services.AddSingleton<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>();
+    builder.Services.AddSingleton<Maliev.Aspire.ServiceDefaults.Authorization.IAuthMetrics>(sp =>
+        sp.GetRequiredService<Maliev.ReceiptService.Api.Services.Auth.AuthMetrics>());
 
-// --- API Configuration ---
-builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
-builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+    // Database Context with ServiceDefaults (skip in Testing environment - handled by test factory)
+    builder.AddPostgresDbContext<ReceiptDbContext>(connectionName: "ReceiptDbContext");
 
-// JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
-builder.AddJwtAuthentication();
-builder.Services.AddPermissionAuthorization();
+    builder.AddRedisDistributedCache(instanceName: "receipt:"); // Redis with in-memory fallback
 
-// Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
-if (!builder.Environment.IsProduction())
-{
-    builder.AddStandardOpenApi(
-        title: "MALIEV Receipt Service API",
-        description: "Receipt management service. Handles receipt creation from invoices, PDF generation, tax validation, balance tracking, partial payments, voiding, and audit trail tracking.");
+    // MassTransit with RabbitMQ - register consumers
+    builder.AddMassTransitWithRabbitMq(configurator =>
+    {
+        // Register PDF callback consumer
+        configurator.AddConsumer<Maliev.ReceiptService.Api.Consumers.PdfGeneratedEventConsumer>();
+    });
+
+    // --- API Configuration ---
+    builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+    builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
+
+    // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
+    builder.AddJwtAuthentication();
+    builder.Services.AddPermissionAuthorization();
+
+    // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
+    if (!builder.Environment.IsProduction())
+    {
+        builder.AddStandardOpenApi(
+            title: "MALIEV Receipt Service API",
+            description: "Receipt management service. Handles receipt creation from invoices, PDF generation, tax validation, balance tracking, partial payments, voiding, and audit trail tracking.");
+    }
+
+    builder.Services.AddControllers();
+
+    // Register Metrics
+    var meter = new System.Diagnostics.Metrics.Meter("receipts-meter");
+    var receiptsCreatedCounter = meter.CreateCounter<long>("receipts.created.total", "receipts", "Total number of receipts created");
+    var creationDurationHistogram = meter.CreateHistogram<double>("receipts.creation.duration", "milliseconds", "Receipt creation duration");
+    builder.Services.AddSingleton(receiptsCreatedCounter);
+    builder.Services.AddSingleton(creationDurationHistogram);
+
+    // Application Services
+    builder.Services.AddScoped<ITaxValidator, ThailandTaxValidator>();
+    builder.Services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
+    builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.ReceiptService>();
+    builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+
+    // IAM Integration
+    builder.AddIAMServiceClient("receipt");
+    builder.Services.AddIAMRegistration<ReceiptIAMRegistrationService>("receipt");
+
+    // External Service Clients with Polly v8 Resilience
+    builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceService");
+
+    var app = builder.Build();
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+    // --- Database Migrations ---
+    await app.MigrateDatabaseAsync<ReceiptDbContext>();
+
+    // Middleware Pipeline
+    app.UseStandardMiddleware();
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
+    app.UseCors();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    // Map endpoints after middleware
+    app.MapControllers();
+
+    // Map Aspire default endpoints (/health, /alive, /metrics)
+    app.MapDefaultEndpoints(servicePrefix: "receipt");
+
+    // Map OpenAPI and Scalar documentation (dev/staging only)
+    app.MapApiDocumentation(servicePrefix: "receipt");
+
+    logger.LogInformation("ReceiptService started successfully");
+    await app.RunAsync();
 }
-
-builder.Services.AddControllers();
-
-// Register Metrics
-var meter = new System.Diagnostics.Metrics.Meter("receipts-meter");
-var receiptsCreatedCounter = meter.CreateCounter<long>("receipts.created.total", "receipts", "Total number of receipts created");
-var creationDurationHistogram = meter.CreateHistogram<double>("receipts.creation.duration", "milliseconds", "Receipt creation duration");
-builder.Services.AddSingleton(receiptsCreatedCounter);
-builder.Services.AddSingleton(creationDurationHistogram);
-
-// Application Services
-builder.Services.AddScoped<ITaxValidator, ThailandTaxValidator>();
-builder.Services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
-builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.ReceiptService>();
-builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
-
-// IAM Integration
-builder.AddIAMServiceClient("receipt");
-builder.Services.AddIAMRegistration<ReceiptIAMRegistrationService>("receipt");
-
-// External Service Clients with Polly v8 Resilience
-builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceService");
-
-var app = builder.Build();
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-
-// --- Database Migrations ---
-await app.MigrateDatabaseAsync<ReceiptDbContext>();
-
-// Middleware Pipeline
-app.UseStandardMiddleware();
-if (!app.Environment.IsDevelopment())
+catch (Exception ex)
 {
-    app.UseHttpsRedirection();
+    bootstrapLogger.LogCritical(ex, "Receipt Service host terminated unexpectedly during startup");
+    throw;
 }
-app.UseCors();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Map endpoints after middleware
-app.MapControllers();
-
-// Map Aspire default endpoints (/health, /alive, /metrics)
-app.MapDefaultEndpoints(servicePrefix: "receipt");
-
-// Map OpenAPI and Scalar documentation (dev/staging only)
-app.MapApiDocumentation(servicePrefix: "receipt");
-
-Log.ServiceStarted(logger);
-await app.RunAsync();
+finally
+{
+    loggerFactory.Dispose();
+}
 
 /// <summary>
 /// Main program class for the application
