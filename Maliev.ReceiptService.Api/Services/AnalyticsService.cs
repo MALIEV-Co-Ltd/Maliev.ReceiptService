@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
+using Maliev.ReceiptService.Api.Models.Responses;
 using Maliev.ReceiptService.Data.Data;
 using Maliev.ReceiptService.Data.Models.Enums;
-using Maliev.ReceiptService.Api.Models.Responses;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 
 namespace Maliev.ReceiptService.Api.Services;
@@ -62,8 +62,8 @@ public class AnalyticsService : IAnalyticsService
             startDate, endDate, groupBy);
 
         // Query receipts in date range
-        var startDateTime = startDate.ToDateTime(TimeOnly.MinValue);
-        var endDateTime = endDate.ToDateTime(TimeOnly.MaxValue);
+        var startDateTime = DateTime.SpecifyKind(startDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var endDateTime = DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
 
         // Perform aggregation in database
         var receiptedInvoicesCount = await _context.Receipts
@@ -137,10 +137,8 @@ public class AnalyticsService : IAnalyticsService
             .Where(t => t.RemainingBalance > 0)
             .SumAsync(t => t.RemainingBalance);
 
-        // Top customers by outstanding (calculated via Receipts as proxy for customer data)
-        // Note: Real outstanding by customer requires joining Invoices which we don't own.
-        // Using Receipt history to estimate top customers by volume.
-        var asOfDateTime = asOf.ToDateTime(TimeOnly.MaxValue);
+        // Top customers by outstanding
+        var asOfDateTime = DateTime.SpecifyKind(asOf.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
 
         var topCustomers = await _context.Receipts
             .Where(r => r.IssueDate <= asOfDateTime && r.Status != ReceiptStatus.Void)
@@ -211,8 +209,8 @@ public class AnalyticsService : IAnalyticsService
             "Calculating payment behavior: {StartDate} to {EndDate}, customer: {CustomerId}",
             startDate, endDate, customerId);
 
-        var startDateTime = startDate.ToDateTime(TimeOnly.MinValue);
-        var endDateTime = endDate.ToDateTime(TimeOnly.MaxValue);
+        var startDateTime = DateTime.SpecifyKind(startDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var endDateTime = DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
 
         // Query receipts
         var query = _context.Receipts
@@ -290,13 +288,16 @@ public class AnalyticsService : IAnalyticsService
             return JsonSerializer.Deserialize<ProcessingMetricsResponse>(cached)!;
         }
 
+        var startUtc = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+        var endUtc = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+
         _logger.LogInformation(
             "Calculating processing metrics: {StartDate} to {EndDate}",
-            startDate, endDate);
+            startUtc, endUtc);
 
         // Query receipts for processing time analysis
         var receipts = await _context.Receipts
-            .Where(r => r.CreatedAt >= startDate && r.CreatedAt <= endDate)
+            .Where(r => r.CreatedAt >= startUtc && r.CreatedAt <= endUtc)
             .Select(r => new
             {
                 r.CreatedAt,

@@ -1,5 +1,4 @@
 using Maliev.ReceiptService.Api.Models.Dtos;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Maliev.ReceiptService.Api.Services;

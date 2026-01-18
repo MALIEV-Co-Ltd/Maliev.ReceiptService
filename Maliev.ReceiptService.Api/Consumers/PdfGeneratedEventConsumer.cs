@@ -1,9 +1,9 @@
-using MassTransit;
-using Microsoft.EntityFrameworkCore;
+using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Data.Data;
 using Maliev.ReceiptService.Data.Models.Entities;
 using Maliev.ReceiptService.Data.Models.Enums;
-using Maliev.MessagingContracts.Generated;
+using MassTransit;
+using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.ReceiptService.Api.Consumers;
 

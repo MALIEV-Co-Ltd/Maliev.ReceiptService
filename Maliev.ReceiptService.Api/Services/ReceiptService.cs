@@ -1,16 +1,15 @@
+using Maliev.MessagingContracts.Generated;
+using Maliev.ReceiptService.Api.Exceptions;
+using Maliev.ReceiptService.Api.Extensions;
+using Maliev.ReceiptService.Api.Models.Dtos;
+using Maliev.ReceiptService.Api.Models.Requests;
+using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Data.Data;
+using Maliev.ReceiptService.Data.Models.Entities;
+using Maliev.ReceiptService.Data.Models.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Maliev.ReceiptService.Data.Data;
-using Maliev.ReceiptService.Api.Events;
-using Maliev.ReceiptService.Api.Exceptions;
-using Maliev.MessagingContracts.Generated;
-using Maliev.ReceiptService.Api.Extensions;
-using Maliev.ReceiptService.Api.Models.Dtos;
-using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
-using Maliev.ReceiptService.Api.Models.Requests;
-using Maliev.ReceiptService.Api.Models.Responses;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
@@ -270,45 +269,51 @@ public class ReceiptService : IReceiptService
             receiptNumber);
 
         // Step 10: Publish PDF generation event
-        var pdfEvent = new Maliev.ReceiptService.Api.Events.PdfGenerationRequestedEvent
-        {
-            ReceiptId = receipt.Id,
-            ReceiptNumber = receipt.ReceiptNumber,
-            CorrelationId = correlationId,
-            Timestamp = DateTime.UtcNow,
-            CustomerDetails = new CustomerDetails
-            {
-                Name = receipt.CustomerName,
-                TaxId = receipt.CustomerTaxId,
-                Address = receipt.CustomerAddress
-            },
-            FinancialDetails = new FinancialDetails
-            {
-                IssueDate = receipt.IssueDate,
-                Subtotal = receipt.Subtotal,
-                TaxAmount = receipt.TaxAmount,
-                WithholdingTaxAmount = receipt.WithholdingTaxAmount,
-                TotalAmount = receipt.TotalAmount,
-                Currency = receipt.Currency,
-                PaymentMethod = receipt.PaymentMethod
-            },
-            LineItems = receipt.LineItems.Select(li => new LineItemDto
-            {
-                LineNumber = li.LineNumber,
-                Description = li.Description,
-                Quantity = li.Quantity,
-                UnitPrice = li.UnitPrice,
-                TaxRate = li.TaxRate,
-                LineTotal = li.LineTotal
-            }).ToList(),
-            TaxFields = new TaxFields
-            {
-                TaxId = invoice.CustomerTaxId ?? string.Empty,
-                VatRate = invoice.VatRate,
-                WithholdingTaxType = invoice.WithholdingTaxType
-            },
-            TemplateId = "receipt-v1"
-        };
+        var pdfEvent = new ReceiptPdfRequestedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: nameof(ReceiptPdfRequestedEvent),
+            MessageType: MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "ReceiptService",
+            ConsumedBy: ["PdfService"],
+            CorrelationId: correlationId,
+            CausationId: null,
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new ReceiptPdfRequestedEventPayload(
+                ReceiptId: receipt.Id,
+                ReceiptNumber: receipt.ReceiptNumber,
+                CustomerDetails: new ReceiptPdfRequestedEventPayloadCustomerDetails(
+                    Name: receipt.CustomerName,
+                    TaxId: receipt.CustomerTaxId ?? string.Empty,
+                    Address: receipt.CustomerAddress ?? string.Empty
+                ),
+                FinancialDetails: new ReceiptPdfRequestedEventPayloadFinancialDetails(
+                    IssueDate: receipt.IssueDate,
+                    Subtotal: (double)receipt.Subtotal,
+                    TaxAmount: (double)receipt.TaxAmount,
+                    WithholdingTaxAmount: (double)(receipt.WithholdingTaxAmount ?? 0),
+                    TotalAmount: (double)receipt.TotalAmount,
+                    Currency: receipt.Currency,
+                    PaymentMethod: receipt.PaymentMethod ?? string.Empty
+                ),
+                LineItems: receipt.LineItems.Select(li => new ReceiptPdfRequestedEventPayloadLineItemsItem(
+                    LineNumber: li.LineNumber,
+                    Description: li.Description,
+                    Quantity: (double)li.Quantity,
+                    UnitPrice: (double)li.UnitPrice,
+                    TaxRate: (double)li.TaxRate,
+                    LineTotal: (double)li.LineTotal
+                )).ToList(),
+                TaxFields: new ReceiptPdfRequestedEventPayloadTaxFields(
+                    TaxId: invoice.CustomerTaxId ?? string.Empty,
+                    VatRate: (double)invoice.VatRate,
+                    WithholdingTaxType: invoice.WithholdingTaxType ?? "None"
+                ),
+                TemplateId: "receipt-v1",
+                RequestedAt: DateTimeOffset.UtcNow
+            )
+        );
 
         await _publishEndpoint.Publish(pdfEvent);
 
@@ -387,12 +392,14 @@ public class ReceiptService : IReceiptService
 
         if (fromDate.HasValue)
         {
-            query = query.Where(r => r.IssueDate >= fromDate.Value);
+            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+            query = query.Where(r => r.IssueDate >= fromDateUtc);
         }
 
         if (toDate.HasValue)
         {
-            query = query.Where(r => r.IssueDate <= toDate.Value);
+            var toDateUtc = DateTime.SpecifyKind(toDate.Value, DateTimeKind.Utc);
+            query = query.Where(r => r.IssueDate <= toDateUtc);
         }
 
         // US4: Filter by segment ID for split invoice receipts (T082)

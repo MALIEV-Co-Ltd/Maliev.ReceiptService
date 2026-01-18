@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Asp.Versioning;
-using Maliev.ReceiptService.Api.Services;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.ReceiptService.Api.Controllers;
 

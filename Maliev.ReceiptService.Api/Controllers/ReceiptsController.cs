@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.ReceiptService.Api.Exceptions;
-using Maliev.ReceiptService.Data.Models.Enums;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Services;
-using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Data.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.ReceiptService.Api.Controllers;
 

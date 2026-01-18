@@ -1,7 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Maliev.Aspire.ServiceDefaults.Database;
 using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.ReceiptService.Data.Data;
 

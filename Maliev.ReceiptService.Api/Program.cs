@@ -2,7 +2,6 @@ using Maliev.Aspire.ServiceDefaults;
 using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
 using Maliev.ReceiptService.Data.Data;
-using Microsoft.Extensions.Logging;
 
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
