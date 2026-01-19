@@ -1,6 +1,6 @@
-using Maliev.ReceiptService.Data.Models.Enums;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Data.Models.Enums;
 
 namespace Maliev.ReceiptService.Api.Services;
 

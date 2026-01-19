@@ -1,7 +1,6 @@
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Maliev.Aspire.ServiceDefaults.Authorization;
-using Microsoft.Extensions.Configuration;
 
 namespace Maliev.ReceiptService.Api.Services.Auth;
 

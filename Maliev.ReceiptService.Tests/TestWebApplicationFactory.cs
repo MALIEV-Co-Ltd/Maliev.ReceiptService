@@ -1033,6 +1033,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
             "receipt.receipts.read",
             "receipt.receipts.update",
             "receipt.receipts.void",
+            "receipt.receipts.send",
             "receipt.receipts.query",
             "receipt.receipts.export",
             "receipt.partial-payments.create",
