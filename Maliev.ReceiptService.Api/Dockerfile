@@ -13,7 +13,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy solution and project files
-COPY ["Maliev.ReceiptService.sln", "./"]
+COPY ["Maliev.ReceiptService.slnx", "./"]
 COPY ["Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj", "Maliev.ReceiptService.Api/"]
 COPY ["Maliev.ReceiptService.Data/Maliev.ReceiptService.Data.csproj", "Maliev.ReceiptService.Data/"]
 COPY ["nuget.config", "."]
