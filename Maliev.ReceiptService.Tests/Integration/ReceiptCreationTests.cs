@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Maliev.MessagingContracts.Generated;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 
@@ -58,8 +60,13 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         // Verify correlation ID header
         Assert.True(response.Headers.Contains("X-Correlation-Id"));
 
-        // TODO: Verify PDF generation event was published to RabbitMQ
-        // This will be implemented once MassTransit test harness is set up
+        // Verify PDF generation event was published to RabbitMQ
+        var harness = Factory.Services.GetRequiredService<MassTransit.Testing.ITestHarness>();
+        Assert.True(await harness.Published.Any<ReceiptPdfRequestedEvent>(x => 
+            x.Context.Message.Payload.ReceiptId == Guid.Parse(receiptId)));
+        
+        Assert.True(await harness.Published.Any<Maliev.MessagingContracts.Generated.ReceiptCreatedEvent>(x => 
+            x.Context.Message.Payload.ReceiptId == Guid.Parse(receiptId)));
     }
 
     [Fact]
@@ -122,7 +129,14 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         // Verify balance tracker was created/updated in database
-        // TODO: Query database directly to verify InvoiceBalanceTracker entity
+        var dbContext = Factory.GetDbContext();
+        var tracker = await dbContext.InvoiceBalanceTrackers
+            .FirstOrDefaultAsync(t => t.InvoiceId == Guid.Parse(invoiceId));
+        
+        Assert.NotNull(tracker);
+        Assert.Equal(1070.00m, tracker.TotalReceiptedAmount);
+        Assert.Equal(0m, tracker.RemainingBalance);
+
         // For now, verify by trying to create another receipt for same invoice
         var secondRequest = new
         {
