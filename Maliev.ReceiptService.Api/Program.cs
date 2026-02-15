@@ -31,7 +31,7 @@ try
     // Database Context with ServiceDefaults (skip in Testing environment - handled by test factory)
     builder.AddPostgresDbContext<ReceiptDbContext>(connectionName: "ReceiptDbContext");
 
-    builder.AddRedisDistributedCache(instanceName: "receipt:"); // Redis with in-memory fallback
+    builder.AddStandardCache("receipt:"); // Redis + in-memory fallback, memory-optimized // Redis with in-memory fallback
 
     // MassTransit with RabbitMQ - register consumers
     builder.AddMassTransitWithRabbitMq(configurator =>
@@ -41,7 +41,7 @@ try
     });
 
     // --- API Configuration ---
-    builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+    builder.AddStandardCors(); // CORS with fail-fast validation
     builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 
     // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)

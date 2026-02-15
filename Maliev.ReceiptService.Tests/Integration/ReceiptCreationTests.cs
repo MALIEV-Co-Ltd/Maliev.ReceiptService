@@ -62,10 +62,10 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
 
         // Verify PDF generation event was published to RabbitMQ
         var harness = Factory.Services.GetRequiredService<MassTransit.Testing.ITestHarness>();
-        Assert.True(await harness.Published.Any<ReceiptPdfRequestedEvent>(x => 
+        Assert.True(await harness.Published.Any<ReceiptPdfRequestedEvent>(x =>
             x.Context.Message.Payload.ReceiptId == Guid.Parse(receiptId)));
-        
-        Assert.True(await harness.Published.Any<Maliev.MessagingContracts.Generated.ReceiptCreatedEvent>(x => 
+
+        Assert.True(await harness.Published.Any<Maliev.MessagingContracts.Generated.ReceiptCreatedEvent>(x =>
             x.Context.Message.Payload.ReceiptId == Guid.Parse(receiptId)));
     }
 
@@ -132,7 +132,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         var dbContext = Factory.GetDbContext();
         var tracker = await dbContext.InvoiceBalanceTrackers
             .FirstOrDefaultAsync(t => t.InvoiceId == Guid.Parse(invoiceId));
-        
+
         Assert.NotNull(tracker);
         Assert.Equal(1070.00m, tracker.TotalReceiptedAmount);
         Assert.Equal(0m, tracker.RemainingBalance);
@@ -352,4 +352,3 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         return int.Parse(parts[2]);
     }
 }
-
