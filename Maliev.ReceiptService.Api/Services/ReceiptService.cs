@@ -1,3 +1,4 @@
+using Maliev.MessagingContracts.Contracts.Receipts;
 using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Api.Exceptions;
 using Maliev.ReceiptService.Api.Extensions;
@@ -241,7 +242,7 @@ public class ReceiptService : IReceiptService
             receiptNumber, request.InvoiceId);
 
         // Step 9.5: Publish ReceiptCreatedEvent
-        await _publishEndpoint.Publish(new MessagingContracts.Generated.ReceiptCreatedEvent(
+        await _publishEndpoint.Publish(new ReceiptCreatedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptCreatedEvent",
             MessageType: MessageType.Event,
@@ -541,7 +542,7 @@ public class ReceiptService : IReceiptService
         await _context.SaveChangesAsync();
 
         // Step 7: Publish ReceiptVoidedEvent
-        await _publishEndpoint.Publish(new MessagingContracts.Generated.ReceiptVoidedEvent(
+        await _publishEndpoint.Publish(new ReceiptVoidedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptVoidedEvent",
             MessageType: MessageType.Event,

@@ -1,3 +1,5 @@
+using Maliev.MessagingContracts.Contracts.Pdf;
+using Maliev.MessagingContracts.Contracts.Receipts;
 using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Api.Consumers;
 using Maliev.ReceiptService.Data.Models.Entities;
@@ -65,7 +67,7 @@ public class PdfGeneratedEventIntegrationTests : BaseReceiptIntegrationTest
         consumeContextMock.Setup(c => c.Message).Returns(message);
 
         // Act
-        await consumer.Consume(consumeContextMock.Object);
+        await consumer.Consume((ConsumeContext<MessagingContracts.Contracts.Pdf.PdfGenerationCompletedEvent>)consumeContextMock.Object);
 
         // Assert
         var updatedReceipt = await context.Receipts.FindAsync(receipt.Id);
