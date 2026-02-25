@@ -202,7 +202,7 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
         Assert.Equal(number2 + 1, number3);
     }
 
-    [Fact(Skip = "Service unavailability testing requires advanced HTTP client mocking with retry policies")]
+    [Fact]
     public async Task CreateReceipt_WithInvoiceServiceDown_ReturnsServiceUnavailable()
     {
         // This test requires configuring the HTTP client with proper retry policies
