@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <SharedLibraryVersion Condition="'$(SharedLibraryVersion)' == ''">1.0.*-*</SharedLibraryVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,11 +28,16 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
     <ProjectReference Include="..\Maliev.ReceiptService.Api\Maliev.ReceiptService.Api.csproj" />
     <ProjectReference Include="..\Maliev.ReceiptService.Data\Maliev.ReceiptService.Data.csproj" />
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
-</Project>
+  <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ProjectReference Include="..\Maliev.ReceiptService.Api\Maliev.ReceiptService.Api.csproj" />
+    <ProjectReference Include="..\Maliev.ReceiptService.Data\Maliev.ReceiptService.Data.csproj" />
+    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(SharedLibraryVersion)" />
+  </ItemGroup>
 
+</Project>
