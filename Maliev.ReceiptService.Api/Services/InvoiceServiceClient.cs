@@ -1,4 +1,5 @@
 using Maliev.ReceiptService.Api.Models.Dtos;
+using Maliev.ReceiptService.Api.Exceptions;
 using System.Text.Json;
 
 namespace Maliev.ReceiptService.Api.Services;
@@ -46,6 +47,12 @@ public class InvoiceServiceClient : IInvoiceServiceClient
                 return null;
             }
 
+            if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                _logger.LogError("Invoice Service is unavailable (503) while fetching invoice {InvoiceId}", invoiceId);
+                throw new InvoiceServiceUnavailableException("Invoice Service is temporarily unavailable");
+            }
+
             response.EnsureSuccessStatusCode();
 
             var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -55,7 +62,19 @@ public class InvoiceServiceClient : IInvoiceServiceClient
 
             return invoice;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                                             ex.InnerException is System.Net.Sockets.SocketException ||
+                                             ex.InnerException is System.IO.IOException)
+        {
+            _logger.LogError(ex, "Transient error fetching invoice {InvoiceId} from Invoice Service", invoiceId);
+            throw new InvoiceServiceUnavailableException("Invoice Service is temporarily unavailable", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "Timeout fetching invoice {InvoiceId} from Invoice Service", invoiceId);
+            throw new InvoiceServiceUnavailableException("Invoice Service request timed out", ex);
+        }
+        catch (Exception ex) when (ex is not InvoiceServiceUnavailableException)
         {
             _logger.LogError(ex, "Error fetching invoice {InvoiceId} from Invoice Service", invoiceId);
             throw;
