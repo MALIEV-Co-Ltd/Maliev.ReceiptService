@@ -128,8 +128,8 @@ public class GetReceiptContractTests : IAsyncLifetime
         var jsonDoc = JsonDocument.Parse(content);
         var root = jsonDoc.RootElement;
 
-        Assert.True(root.TryGetProperty("errorCode", out _));
-        Assert.True(root.TryGetProperty("message", out _));
+        Assert.True(root.TryGetProperty("error", out var error));
+        Assert.True(error.GetString().Contains("not found", StringComparison.OrdinalIgnoreCase) || error.GetString().Contains("Receipt", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

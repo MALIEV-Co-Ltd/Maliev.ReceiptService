@@ -35,7 +35,7 @@ public static class ReceiptPredefinedRoles
             ReceiptPermissions.PartialPayments.Create,
             ReceiptPermissions.PartialPayments.Read,
             ReceiptPermissions.PartialPayments.Manage,
-            ReceiptPermissions.Audit.Read
+            ReceiptPermissions.Audits.Read
         }),
 
         (Creator, "Can create and read receipts and payments", new[]
@@ -57,8 +57,8 @@ public static class ReceiptPredefinedRoles
             ReceiptPermissions.Receipts.Read,
             ReceiptPermissions.Receipts.Query,
             ReceiptPermissions.Receipts.Export,
-            ReceiptPermissions.Audit.Read,
-            ReceiptPermissions.Audit.Export
+            ReceiptPermissions.Audits.Read,
+            ReceiptPermissions.Audits.Export
         })
     };
 }

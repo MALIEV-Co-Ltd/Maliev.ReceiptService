@@ -4,7 +4,6 @@ using System.Text.Json;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using Maliev.MessagingContracts.Contracts.Receipts;
 using Maliev.MessagingContracts.Generated;
 
 namespace Maliev.ReceiptService.Tests.Contract;

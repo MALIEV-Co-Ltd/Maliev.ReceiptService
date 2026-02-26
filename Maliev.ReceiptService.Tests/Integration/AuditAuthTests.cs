@@ -21,7 +21,7 @@ public class AuditAuthTests
         // Arrange
         var token = _factory.CreateTestJwtToken("user-auditor", additionalClaims: new Dictionary<string, string>
         {
-            ["permissions"] = ReceiptPermissions.Audit.Read
+            ["permissions"] = ReceiptPermissions.Audits.Read
         });
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);

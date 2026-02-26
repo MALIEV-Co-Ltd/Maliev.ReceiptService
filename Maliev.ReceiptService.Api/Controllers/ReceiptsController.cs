@@ -63,62 +63,40 @@ public class ReceiptsController : ControllerBase
         try
         {
             var receipt = await _receiptService.CreateReceiptAsync(request, staffId, correlationId);
+            var version = HttpContext.GetRequestedApiVersion()?.ToString() ?? "1.0";
+
             return CreatedAtAction(
                 nameof(GetReceiptById),
-                new { id = receipt.Id, version = "1.0" },
+                new { id = receipt.Id, version = version },
                 receipt);
         }
         catch (InvoiceNotFoundException ex)
         {
             _logger.LogWarning(ex, "Invoice not found: {InvoiceId}", request.InvoiceId);
-            return NotFound(new
-            {
-                errorCode = "INVOICE_NOT_FOUND",
-                message = ex.Message
-            });
+            throw;
         }
         catch (TaxValidationException ex)
         {
             _logger.LogWarning(ex, "Tax validation failed for invoice {InvoiceId}", request.InvoiceId);
-            return BadRequest(new
-            {
-                errorCode = "TAX_VALIDATION_FAILED",
-                message = ex.Message
-            });
+            throw;
         }
-        catch (OverReceiptingException ex)
+        catch (OverReceiptingConflictException ex)
         {
             _logger.LogWarning(ex, "Over-receipting attempted for invoice {InvoiceId}", request.InvoiceId);
-            return Conflict(new
-            {
-                errorCode = "INSUFFICIENT_BALANCE",
-                message = ex.Message
-            });
+            throw;
         }
-        catch (DuplicateReceiptException ex)
+        catch (DuplicateReceiptConflictException ex)
         {
             _logger.LogWarning(ex, "Duplicate receipt or concurrency conflict for invoice {InvoiceId}", request.InvoiceId);
-            return Conflict(new
-            {
-                errorCode = "CONCURRENCY_CONFLICT",
-                message = ex.Message
-            });
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "Invoice Service unavailable for invoice {InvoiceId}", request.InvoiceId);
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
-            {
-                errorCode = "INVOICE_SERVICE_UNAVAILABLE",
-                message = "Unable to retrieve invoice details after 2 retries"
-            });
+            throw;
         }
     }
 
     /// <summary>
     /// Get receipt by ID
-    /// GET /v1/receipts/{id}
     /// </summary>
+    /// <param name="id">Receipt identifier</param>
+    /// <returns>Receipt response</returns>
     [HttpGet("{id:guid}")]
     [RequirePermission(ReceiptPermissions.Receipts.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -129,11 +107,7 @@ public class ReceiptsController : ControllerBase
 
         if (receipt == null)
         {
-            return NotFound(new
-            {
-                errorCode = "RECEIPT_NOT_FOUND",
-                message = $"Receipt {id} not found"
-            });
+            throw new ReceiptNotFoundException(id, $"Receipt {id} not found");
         }
 
         return Ok(receipt);
@@ -291,30 +265,21 @@ public class ReceiptsController : ControllerBase
         catch (ReceiptNotFoundException ex)
         {
             _logger.LogWarning(ex, "Receipt not found: {ReceiptId}", id);
-            return NotFound(new
-            {
-                errorCode = "RECEIPT_NOT_FOUND",
-                message = ex.Message
-            });
+            throw;
         }
         catch (ReceiptBusinessRuleException ex)
         {
             _logger.LogWarning(ex, "Cannot send receipt {ReceiptId}: {Message}", id, ex.Message);
-            return BadRequest(new
-            {
-                errorCode = "INVALID_OPERATION",
-                message = ex.Message
-            });
+            throw;
         }
     }
 
     /// <summary>
     /// Get audit history for a receipt
     /// GET /v1/receipts/{id}/audit-history
-    /// Task: T072 [P] [US3] Implement GET /v1/receipts/{id}/audit-history
     /// </summary>
     [HttpGet("{id:guid}/audit-history")]
-    [RequirePermission(ReceiptPermissions.Audit.Read)]
+    [RequirePermission(ReceiptPermissions.Audits.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAuditHistory(Guid id)
@@ -329,11 +294,7 @@ public class ReceiptsController : ControllerBase
         catch (ReceiptNotFoundException ex)
         {
             _logger.LogWarning(ex, "Receipt not found: {ReceiptId}", id);
-            return NotFound(new
-            {
-                errorCode = "RECEIPT_NOT_FOUND",
-                message = ex.Message
-            });
+            throw;
         }
     }
 }

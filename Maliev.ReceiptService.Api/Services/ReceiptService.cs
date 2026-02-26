@@ -1,4 +1,3 @@
-using Maliev.MessagingContracts.Contracts.Receipts;
 using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Api.Exceptions;
 using Maliev.ReceiptService.Api.Extensions;
@@ -155,7 +154,7 @@ public class ReceiptService : IReceiptService
         if (balanceTracker.RemainingBalance < request.Amount)
         {
             var segmentInfo = request.InvoiceSegmentId.HasValue ? $" for segment {request.InvoiceSegmentId}" : "";
-            throw new OverReceiptingException(
+            throw new OverReceiptingConflictException(
                 request.InvoiceId,
                 request.Amount,
                 balanceTracker.RemainingBalance,
@@ -225,14 +224,14 @@ public class ReceiptService : IReceiptService
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new DuplicateReceiptException(
+            throw new DuplicateReceiptConflictException(
                 request.InvoiceId,
                 "Invoice balance was modified by another operation. Please retry.");
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx && pgEx.SqlState == "23505")
         {
             // Unique constraint violation on InvoiceBalanceTracker - concurrent insert detected
-            throw new DuplicateReceiptException(
+            throw new DuplicateReceiptConflictException(
                 request.InvoiceId,
                 "Another receipt is being created for this invoice concurrently. Please retry.");
         }

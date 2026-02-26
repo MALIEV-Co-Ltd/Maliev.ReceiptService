@@ -37,12 +37,12 @@ public static class ReceiptPermissions
     }
 
     /// <summary>Permissions for audit operations.</summary>
-    public static class Audit
+    public static class Audits
     {
         /// <summary>Permission to read audit logs.</summary>
-        public const string Read = "receipt.audit.read";
+        public const string Read = "receipt.audits.read";
         /// <summary>Permission to export audit logs.</summary>
-        public const string Export = "receipt.audit.export";
+        public const string Export = "receipt.audits.export";
     }
 
     /// <summary>
@@ -60,8 +60,8 @@ public static class ReceiptPermissions
         { PartialPayments.Create, "Create partial payment records" },
         { PartialPayments.Read, "Read partial payment details" },
         { PartialPayments.Manage, "Update/Delete partial payments" },
-        { Audit.Read, "Read receipt audit logs" },
-        { Audit.Export, "Export audit data" }
+        { Audits.Read, "Read receipt audit logs" },
+        { Audits.Export, "Export audit data" }
     };
 
     /// <summary>All available permission codes</summary>

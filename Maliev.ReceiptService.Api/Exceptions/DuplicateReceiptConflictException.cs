@@ -3,7 +3,7 @@ namespace Maliev.ReceiptService.Api.Exceptions;
 /// <summary>
 /// Exception thrown when a duplicate receipt is attempted to be created.
 /// </summary>
-public class DuplicateReceiptException : Exception
+public class DuplicateReceiptConflictException : Exception
 {
     /// <summary>
     /// Gets the invoice ID.
@@ -11,11 +11,11 @@ public class DuplicateReceiptException : Exception
     public Guid InvoiceId { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DuplicateReceiptException"/> class.
+    /// Initializes a new instance of the <see cref="DuplicateReceiptConflictException"/> class.
     /// </summary>
     /// <param name="invoiceId">The invoice ID.</param>
     /// <param name="message">The exception message.</param>
-    public DuplicateReceiptException(Guid invoiceId, string message) : base(message)
+    public DuplicateReceiptConflictException(Guid invoiceId, string message) : base(message)
     {
         InvoiceId = invoiceId;
     }

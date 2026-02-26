@@ -1039,8 +1039,8 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
             "receipt.partial-payments.create",
             "receipt.partial-payments.read",
             "receipt.partial-payments.manage",
-            "receipt.audit.read",
-            "receipt.audit.export"
+            "receipt.audits.read",
+            "receipt.audits.export"
         };
 
         var token = CreateTestJwtToken(userId, roles: null, permissions: allPermissions);

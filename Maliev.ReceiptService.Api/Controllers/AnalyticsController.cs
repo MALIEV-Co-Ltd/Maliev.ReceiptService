@@ -39,7 +39,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T097 [P] [US5]
     /// </summary>
     [HttpGet("payment-completion")]
-    [RequirePermission(ReceiptPermissions.Audit.Read)]
+    [RequirePermission(ReceiptPermissions.Audits.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPaymentCompletionRate(
@@ -80,7 +80,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T098 [P] [US5]
     /// </summary>
     [HttpGet("outstanding-receivables")]
-    [RequirePermission(ReceiptPermissions.Audit.Read)]
+    [RequirePermission(ReceiptPermissions.Audits.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetOutstandingReceivables(
         [FromQuery] DateOnly? asOf = null)
@@ -97,7 +97,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T099 [P] [US5]
     /// </summary>
     [HttpGet("customer-payment-behavior")]
-    [RequirePermission(ReceiptPermissions.Audit.Read)]
+    [RequirePermission(ReceiptPermissions.Audits.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetCustomerPaymentBehavior(
@@ -128,7 +128,7 @@ public class AnalyticsController : ControllerBase
     /// Task: T100 [P] [US5]
     /// </summary>
     [HttpGet("processing-metrics")]
-    [RequirePermission(ReceiptPermissions.Audit.Read)]
+    [RequirePermission(ReceiptPermissions.Audits.Read)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetProcessingMetrics(
