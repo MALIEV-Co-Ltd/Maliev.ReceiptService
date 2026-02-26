@@ -47,12 +47,6 @@ public class InvoiceServiceClient : IInvoiceServiceClient
                 return null;
             }
 
-            if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
-            {
-                _logger.LogError("Invoice Service is unavailable (503) while fetching invoice {InvoiceId}", invoiceId);
-                throw new InvoiceServiceUnavailableException("Invoice Service is temporarily unavailable");
-            }
-
             response.EnsureSuccessStatusCode();
 
             var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -74,7 +68,7 @@ public class InvoiceServiceClient : IInvoiceServiceClient
             _logger.LogError(ex, "Timeout fetching invoice {InvoiceId} from Invoice Service", invoiceId);
             throw new InvoiceServiceUnavailableException("Invoice Service request timed out", ex);
         }
-        catch (Exception ex) when (ex is not InvoiceServiceUnavailableException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching invoice {InvoiceId} from Invoice Service", invoiceId);
             throw;
