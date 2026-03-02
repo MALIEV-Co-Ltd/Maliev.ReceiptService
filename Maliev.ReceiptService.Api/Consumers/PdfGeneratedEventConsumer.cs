@@ -1,9 +1,10 @@
 using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Pdf;
+using Maliev.MessagingContracts.Contracts.Shared;
 using Maliev.MessagingContracts.Contracts.Receipts;
-using Maliev.ReceiptService.Data.Data;
-using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Infrastructure.Data;
+using Maliev.ReceiptService.Domain.Entities;
+using Maliev.ReceiptService.Domain.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -124,7 +125,7 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
         await _publishEndpoint.Publish(new ReceiptGeneratedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptGeneratedEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "ReceiptService",
             ConsumedBy: ["NotificationService", "AnalyticsService"],

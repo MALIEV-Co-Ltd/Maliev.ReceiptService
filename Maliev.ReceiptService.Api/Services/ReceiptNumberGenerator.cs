@@ -1,4 +1,4 @@
-using Maliev.ReceiptService.Data.Data;
+using Maliev.ReceiptService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.ReceiptService.Api.Services;

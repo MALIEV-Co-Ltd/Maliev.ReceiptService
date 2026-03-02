@@ -2,8 +2,8 @@ using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Pdf;
 using Maliev.MessagingContracts.Contracts.Receipts;
 using Maliev.ReceiptService.Api.Consumers;
-using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Domain.Entities;
+using Maliev.ReceiptService.Domain.Enums;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,7 +24,7 @@ public class PdfGeneratedEventIntegrationTests : BaseReceiptIntegrationTest
     {
         // Arrange
         using var scope = Factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Data.Data.ReceiptDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
 
         var receipt = new Receipt
         {

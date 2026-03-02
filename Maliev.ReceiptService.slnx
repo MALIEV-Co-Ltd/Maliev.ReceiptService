@@ -1,5 +1,4 @@
 <Solution>
   <Project Path="Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj" />
-  <Project Path="Maliev.ReceiptService.Data/Maliev.ReceiptService.Data.csproj" />
   <Project Path="Maliev.ReceiptService.Tests/Maliev.ReceiptService.Tests.csproj" />
 </Solution>

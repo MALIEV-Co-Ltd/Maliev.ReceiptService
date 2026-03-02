@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Maliev.ReceiptService.Data.Data;
-using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Infrastructure.Data;
+using Maliev.ReceiptService.Domain.Entities;
+using Maliev.ReceiptService.Domain.Enums;
 using Maliev.ReceiptService.Api.Services;
 using Xunit;
 

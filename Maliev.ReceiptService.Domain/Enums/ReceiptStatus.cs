@@ -1,4 +1,4 @@
-namespace Maliev.ReceiptService.Data.Models.Enums;
+namespace Maliev.ReceiptService.Domain.Enums;
 
 public enum ReceiptStatus
 {

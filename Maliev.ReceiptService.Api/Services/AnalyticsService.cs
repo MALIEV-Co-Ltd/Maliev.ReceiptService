@@ -1,6 +1,6 @@
 using Maliev.ReceiptService.Api.Models.Responses;
-using Maliev.ReceiptService.Data.Data;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Infrastructure.Data;
+using Maliev.ReceiptService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;

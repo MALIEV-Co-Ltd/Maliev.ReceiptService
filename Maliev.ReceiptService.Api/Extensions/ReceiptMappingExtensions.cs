@@ -1,5 +1,5 @@
 using Maliev.ReceiptService.Api.Models.Responses;
-using Maliev.ReceiptService.Data.Models.Entities;
+using Maliev.ReceiptService.Domain.Entities;
 
 namespace Maliev.ReceiptService.Api.Extensions;
 

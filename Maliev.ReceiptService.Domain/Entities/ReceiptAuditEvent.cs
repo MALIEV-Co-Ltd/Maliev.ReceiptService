@@ -1,8 +1,8 @@
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maliev.ReceiptService.Data.Models.Entities;
+namespace Maliev.ReceiptService.Domain.Entities;
 
 public class ReceiptAuditEvent
 {
@@ -38,7 +38,6 @@ public class ReceiptAuditEvent
     [Required]
     public DateTime RetainUntil { get; init; }
 
-    // Navigation property
     [ForeignKey(nameof(ReceiptId))]
     public Receipt Receipt { get; init; } = null!;
 }

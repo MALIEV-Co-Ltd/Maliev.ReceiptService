@@ -1,6 +1,6 @@
 using Maliev.ReceiptService.Api.Extensions;
-using Maliev.ReceiptService.Data.Models.Entities;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Domain.Entities;
+using Maliev.ReceiptService.Domain.Enums;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Unit;

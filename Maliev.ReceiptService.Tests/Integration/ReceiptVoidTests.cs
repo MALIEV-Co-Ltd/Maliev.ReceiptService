@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Maliev.ReceiptService.Data.Data;
+using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Models.Responses;
 using Xunit;
@@ -244,4 +244,3 @@ public class ReceiptVoidTests : BaseReceiptIntegrationTest
         Assert.True(voidedReceipt.VoidedAt <= DateTime.UtcNow);
     }
 }
-

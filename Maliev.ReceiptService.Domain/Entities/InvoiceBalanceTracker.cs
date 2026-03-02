@@ -1,22 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maliev.ReceiptService.Data.Models.Entities;
+namespace Maliev.ReceiptService.Domain.Entities;
 
-/// <summary>
-/// Tracks receiptable balance for invoices and invoice segments (US4)
-/// Uses composite key (InvoiceId + SegmentId) to support segment-level tracking
-/// SegmentId = null for whole-invoice tracking
-/// </summary>
 public class InvoiceBalanceTracker
 {
     [Key]
     [Column(Order = 0)]
     public Guid InvoiceId { get; init; }
 
-    /// <summary>
-    /// Segment ID for split invoice tracking (Guid.Empty for whole invoice)
-    /// </summary>
     [Key]
     [Column(Order = 1)]
     public Guid SegmentId { get; init; }

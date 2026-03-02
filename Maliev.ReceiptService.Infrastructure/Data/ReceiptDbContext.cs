@@ -1,8 +1,8 @@
 using Maliev.Aspire.ServiceDefaults.Database;
-using Maliev.ReceiptService.Data.Models.Entities;
+using Maliev.ReceiptService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Maliev.ReceiptService.Data.Data;
+namespace Maliev.ReceiptService.Infrastructure.Data;
 
 public class ReceiptDbContext : DbContext
 {
@@ -17,7 +17,6 @@ public class ReceiptDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Receipt configuration
         modelBuilder.Entity<Receipt>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -49,20 +48,17 @@ public class ReceiptDbContext : DbContext
                 .IsRowVersion()
                 .ValueGeneratedOnAddOrUpdate();
 
-            // One-to-Many: Receipt -> ReceiptLineItems (cascade delete)
             entity.HasMany(e => e.LineItems)
                 .WithOne(e => e.Receipt)
                 .HasForeignKey(e => e.ReceiptId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // One-to-Many: Receipt -> ReceiptAuditEvents (no cascade)
             entity.HasMany(e => e.AuditEvents)
                 .WithOne(e => e.Receipt)
                 .HasForeignKey(e => e.ReceiptId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        // ReceiptLineItem configuration
         modelBuilder.Entity<ReceiptLineItem>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -83,7 +79,6 @@ public class ReceiptDbContext : DbContext
                 .HasColumnType("decimal(18,2)");
         });
 
-        // ReceiptAuditEvent configuration
         modelBuilder.Entity<ReceiptAuditEvent>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -97,10 +92,8 @@ public class ReceiptDbContext : DbContext
                 .HasConversion<string>();
         });
 
-        // InvoiceBalanceTracker configuration (US4 - composite key for segment support)
         modelBuilder.Entity<InvoiceBalanceTracker>(entity =>
         {
-            // Composite key: InvoiceId + SegmentId (Guid.Empty for whole-invoice tracking)
             entity.HasKey(e => new { e.InvoiceId, e.SegmentId });
 
             entity.HasIndex(e => e.InvoiceId);
@@ -120,7 +113,6 @@ public class ReceiptDbContext : DbContext
                 .ValueGeneratedOnAddOrUpdate();
         });
 
-        // Apply PostgreSQL snake_case naming convention globally
         SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }
 }

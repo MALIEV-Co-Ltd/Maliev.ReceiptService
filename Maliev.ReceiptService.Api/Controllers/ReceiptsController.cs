@@ -4,7 +4,7 @@ using Maliev.ReceiptService.Api.Exceptions;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

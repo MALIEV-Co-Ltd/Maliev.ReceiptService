@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Maliev.ReceiptService.Data\Maliev.ReceiptService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.ReceiptService.Domain\Maliev.ReceiptService.Domain.csproj" />
+    <ProjectReference Include="..\Maliev.ReceiptService.Application\Maliev.ReceiptService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.ReceiptService.Infrastructure\Maliev.ReceiptService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

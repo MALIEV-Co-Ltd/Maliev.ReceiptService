@@ -1,4 +1,4 @@
-using Maliev.ReceiptService.Data.Data;
+using Maliev.ReceiptService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -16,6 +16,6 @@ public class ModelIntegrityTests
         using var context = new ReceiptDbContext(options);
         var hasChanges = context.Database.HasPendingModelChanges();
 
-        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.ReceiptService.Data --startup-project Maliev.ReceiptService.Api'");
+        Assert.False(hasChanges, "Run 'dotnet ef migrations add <Name> --project Maliev.ReceiptService.Infrastructure --startup-project Maliev.ReceiptService.Api'");
     }
 }

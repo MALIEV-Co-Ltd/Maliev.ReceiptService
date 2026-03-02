@@ -31,9 +31,9 @@ public class ReceiptSendTests : BaseReceiptIntegrationTest
         // Simulate PDF generation to make receipt Active
         using (var scope = Factory.Services.CreateScope())
         {
-            var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Data.Data.ReceiptDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
             var receipt = await context.Receipts.FindAsync(receiptId);
-            receipt!.Status = Maliev.ReceiptService.Data.Models.Enums.ReceiptStatus.Active;
+            receipt!.Status = Maliev.ReceiptService.Domain.Enums.ReceiptStatus.Active;
             receipt.PdfReferenceId = Guid.NewGuid();
             await context.SaveChangesAsync();
         }

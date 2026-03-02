@@ -1,4 +1,4 @@
-using Maliev.ReceiptService.Data.Data;
+using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Tests.Testing;
 using WireMock.Server;
 using WireMock.RequestBuilders;

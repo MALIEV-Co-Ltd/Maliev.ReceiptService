@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maliev.ReceiptService.Data.Models.Entities;
+namespace Maliev.ReceiptService.Domain.Entities;
 
 public class ReceiptLineItem
 {
@@ -36,7 +36,6 @@ public class ReceiptLineItem
     [Column(TypeName = "decimal(18,2)")]
     public decimal LineTotal { get; init; }
 
-    // Navigation property
     [ForeignKey(nameof(ReceiptId))]
     public Receipt Receipt { get; init; } = null!;
 }

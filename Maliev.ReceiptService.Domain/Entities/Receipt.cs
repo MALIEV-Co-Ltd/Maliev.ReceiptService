@@ -1,7 +1,7 @@
-using Maliev.ReceiptService.Data.Models.Enums;
+using Maliev.ReceiptService.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
-namespace Maliev.ReceiptService.Data.Models.Entities;
+namespace Maliev.ReceiptService.Domain.Entities;
 
 public class Receipt
 {
@@ -74,7 +74,6 @@ public class Receipt
     [Timestamp]
     public byte[]? RowVersion { get; set; }
 
-    // Navigation properties
     public ICollection<ReceiptLineItem> LineItems { get; init; } = new List<ReceiptLineItem>();
     public ICollection<ReceiptAuditEvent> AuditEvents { get; init; } = new List<ReceiptAuditEvent>();
 
