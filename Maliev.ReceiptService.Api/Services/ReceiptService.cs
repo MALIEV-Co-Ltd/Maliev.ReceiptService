@@ -1,5 +1,5 @@
+using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Receipts;
-using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Api.Exceptions;
 using Maliev.ReceiptService.Api.Extensions;
 using Maliev.ReceiptService.Api.Models.Dtos;

@@ -1,6 +1,6 @@
+using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Pdf;
 using Maliev.MessagingContracts.Contracts.Receipts;
-using Maliev.MessagingContracts.Generated;
 using Maliev.ReceiptService.Data.Data;
 using Maliev.ReceiptService.Data.Models.Entities;
 using Maliev.ReceiptService.Data.Models.Enums;
