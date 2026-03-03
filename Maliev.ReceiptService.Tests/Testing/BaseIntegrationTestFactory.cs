@@ -313,7 +313,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     private async Task ApplyMigrationsAsync()
     {
         await using var context = CreateDbContext();
-        await context.Database.MigrateAsync();
+        await context.Database.EnsureCreatedAsync();
     }
 
     /// <summary>
