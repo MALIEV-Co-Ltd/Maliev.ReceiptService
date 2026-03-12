@@ -71,9 +71,6 @@ public class Receipt
     [Required]
     public Guid CorrelationId { get; init; }
 
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
-
     public ICollection<ReceiptLineItem> LineItems { get; init; } = new List<ReceiptLineItem>();
     public ICollection<ReceiptAuditEvent> AuditEvents { get; init; } = new List<ReceiptAuditEvent>();
 

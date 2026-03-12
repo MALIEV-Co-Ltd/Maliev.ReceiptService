@@ -25,4 +25,5 @@
     <ProjectReference Include="..\Maliev.ReceiptService.Infrastructure\Maliev.ReceiptService.Infrastructure.csproj" />
   </ItemGroup>
 
+
 </Project>

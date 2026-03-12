@@ -44,10 +44,6 @@ public class ReceiptDbContext : DbContext
             entity.Property(e => e.Status)
                 .HasConversion<string>();
 
-            entity.Property(e => e.RowVersion)
-                .IsRowVersion()
-                .ValueGeneratedOnAddOrUpdate();
-
             entity.HasMany(e => e.LineItems)
                 .WithOne(e => e.Receipt)
                 .HasForeignKey(e => e.ReceiptId)
@@ -107,10 +103,6 @@ public class ReceiptDbContext : DbContext
 
             entity.Property(e => e.RemainingBalance)
                 .HasColumnType("decimal(18,2)");
-
-            entity.Property(e => e.RowVersion)
-                .IsRowVersion()
-                .ValueGeneratedOnAddOrUpdate();
         });
 
         SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);

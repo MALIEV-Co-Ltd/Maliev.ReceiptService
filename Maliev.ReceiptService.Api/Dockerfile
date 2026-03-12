@@ -15,7 +15,9 @@ WORKDIR /src
 # Copy solution and project files
 COPY ["Maliev.ReceiptService.slnx", "./"]
 COPY ["Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj", "Maliev.ReceiptService.Api/"]
-COPY ["Maliev.ReceiptService.Data/Maliev.ReceiptService.Data.csproj", "Maliev.ReceiptService.Data/"]
+COPY ["Maliev.ReceiptService.Application/Maliev.ReceiptService.Application.csproj", "Maliev.ReceiptService.Application/"]
+COPY ["Maliev.ReceiptService.Domain/Maliev.ReceiptService.Domain.csproj", "Maliev.ReceiptService.Domain/"]
+COPY ["Maliev.ReceiptService.Infrastructure/Maliev.ReceiptService.Infrastructure.csproj", "Maliev.ReceiptService.Infrastructure/"]
 COPY ["nuget.config", "."]
 
 # Restore dependencies with BuildKit secrets

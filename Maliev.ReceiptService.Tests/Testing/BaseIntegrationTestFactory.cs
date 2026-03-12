@@ -313,7 +313,18 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     private async Task ApplyMigrationsAsync()
     {
         await using var context = CreateDbContext();
-        await context.Database.EnsureCreatedAsync();
+
+        // Drop all tables to ensure clean state for testcontainer reuse
+        await context.Database.ExecuteSqlRawAsync(@"
+            DROP TABLE IF EXISTS ""receipt_line_items"" CASCADE;
+            DROP TABLE IF EXISTS ""receipt_audit_events"" CASCADE;
+            DROP TABLE IF EXISTS ""receipts"" CASCADE;
+            DROP TABLE IF EXISTS ""invoice_balance_trackers"" CASCADE;
+            DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;
+        ");
+
+        // Apply migrations to fresh database
+        await context.Database.MigrateAsync();
     }
 
     /// <summary>

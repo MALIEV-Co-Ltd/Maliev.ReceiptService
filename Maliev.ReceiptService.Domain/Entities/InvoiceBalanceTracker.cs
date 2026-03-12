@@ -28,6 +28,4 @@ public class InvoiceBalanceTracker
     [Required]
     public DateTime LastUpdatedAt { get; set; }
 
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
 }
