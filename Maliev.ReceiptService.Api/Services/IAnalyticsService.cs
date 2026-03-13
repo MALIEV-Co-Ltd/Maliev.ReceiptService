@@ -43,6 +43,6 @@ public interface IAnalyticsService
     /// Validates SC-001 (5s creation), SC-004 (1s PDF publish)
     /// </summary>
     Task<ProcessingMetricsResponse> GetProcessingMetricsAsync(
-        DateTime startDate,
-        DateTime endDate);
+        DateOnly startDate,
+        DateOnly endDate);
 }

@@ -267,7 +267,7 @@ public class PdfGenerationEventTests : IAsyncLifetime
         var originalEvent = new ReceiptPdfRequestedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptPdfRequestedEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "Test",
             ConsumedBy: Array.Empty<string>(),

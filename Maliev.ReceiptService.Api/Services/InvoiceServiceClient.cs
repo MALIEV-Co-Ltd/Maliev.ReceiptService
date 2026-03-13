@@ -6,6 +6,10 @@ namespace Maliev.ReceiptService.Api.Services;
 /// <summary>
 /// Implementation of the invoice service client.
 /// </summary>
+/// <remarks>
+/// TODO: [ARCH-DEBT] This client should be moved to the Application layer (or Infrastructure)
+/// per Clean Architecture (Api → Application → Domain ← Infrastructure).
+/// </remarks>
 public class InvoiceServiceClient : IInvoiceServiceClient
 {
     private readonly HttpClient _httpClient;

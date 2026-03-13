@@ -74,11 +74,9 @@ public class AnalyticsTests : BaseReceiptIntegrationTest
     [Fact]
     public async Task GetProcessingMetrics_ReturnsSuccess()
     {
-        var startDate = DateTime.UtcNow.AddDays(-1);
-        var endDate = DateTime.UtcNow;
-        startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
-        endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
-        var response = await Client.GetAsync($"/receipt/v1/analytics/processing-metrics?startDate={startDate:O}&endDate={endDate:O}");
+        var startDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var response = await Client.GetAsync($"/receipt/v1/analytics/processing-metrics?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProcessingMetricsResponse>();
         Assert.NotNull(result);

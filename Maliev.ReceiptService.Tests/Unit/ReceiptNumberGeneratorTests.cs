@@ -12,6 +12,7 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
 {
     private readonly TestWebApplicationFactory _factory;
     private ReceiptDbContext? _context;
+    private static bool _sequenceInitialized;
 
     public ReceiptNumberGeneratorTests(TestWebApplicationFactory factory)
     {
@@ -21,7 +22,15 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _context = _factory.CreateDbContext();
-        await _context.Database.EnsureCreatedAsync(); // Ensure schema exists
+        await _context.Database.EnsureCreatedAsync();
+
+        // Reset sequence once at the start of this test class
+        // This runs before any test in this class
+        if (!_sequenceInitialized)
+        {
+            await _context.Database.ExecuteSqlRawAsync("ALTER SEQUENCE receipt_number_seq RESTART WITH 1");
+            _sequenceInitialized = true;
+        }
     }
 
     public async Task DisposeAsync()
@@ -69,6 +78,8 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
         var secondSeq = ExtractSequenceNumber(second);
         var thirdSeq = ExtractSequenceNumber(third);
 
+        // With global sequence starting at 1, these should be 1, 2, 3
+        Assert.Equal(1, firstSeq);
         Assert.Equal(2, secondSeq);
         Assert.Equal(3, thirdSeq);
     }
@@ -104,9 +115,9 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
         var malievFirst = await generator.GenerateNextReceiptNumberAsync(entity1, year);
         var acmeFirst = await generator.GenerateNextReceiptNumberAsync(entity2, year);
 
-        // Assert
-        Assert.Matches(@"^MALIEV-2025-000001$", malievFirst);
-        Assert.Matches(@"^ACME-2025-000001$", acmeFirst);
+        // Assert - With global sequence starting at 1, both get unique consecutive numbers
+        Assert.Equal("MALIEV-2025-000001", malievFirst);
+        Assert.Equal("ACME-2025-000002", acmeFirst);
     }
 
     [Fact]
@@ -120,9 +131,9 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
         var year2025 = await generator.GenerateNextReceiptNumberAsync(entity, 2025);
         var year2026 = await generator.GenerateNextReceiptNumberAsync(entity, 2026);
 
-        // Assert
-        Assert.Matches(@"^MALIEV-2025-000001$", year2025);
-        Assert.Matches(@"^MALIEV-2026-000001$", year2026);
+        // Assert - With global sequence starting at 1, these should be 1, 2
+        Assert.Equal("MALIEV-2025-000001", year2025);
+        Assert.Equal("MALIEV-2026-000002", year2026);
     }
 
     [Fact]
@@ -159,56 +170,40 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
         var entity = "MALIEV";
         var year = 2025;
 
-        // Simulate having 99 receipts already
+        // Simulate having 99 receipts already (generate 99, sequence will be at 99)
         for (int i = 0; i < 99; i++)
         {
             await GenerateAndSaveReceiptAsync(entity, year);
         }
 
-        // Act
+        // Act - Now the next call should be 100
         var number100 = await GenerateAndSaveReceiptAsync(entity, year);
 
         // Assert
-        Assert.Matches(@"^MALIEV-2025-000100$", number100);
+        Assert.Equal("MALIEV-2025-000100", number100);
     }
 
     [Fact]
     public async Task GenerateNextReceiptNumber_AfterNumber999999_ThrowsException()
     {
-        // Arrange
-        if (_context == null)
-        {
-            throw new InvalidOperationException("Context not initialized.");
-        }
-
-        var generator = CreateReceiptNumberGenerator();
+        // Arrange - Manually set the sequence to 999999 using raw SQL
         var entity = "MALIEV";
         var year = 2025;
 
-        // Create a receipt at the sequence limit (999999)
-        var receipt = new Receipt
-        {
-            Id = Guid.NewGuid(),
-            ReceiptNumber = $"{entity}-{year}-999999",
-            InvoiceId = Guid.NewGuid(),
-            IssueDate = DateTime.UtcNow,
-            CustomerName = "Test Customer",
-            CustomerTaxId = "1234567890123",
-            CustomerAddress = "Test Address",
-            Subtotal = 1000m,
-            TaxAmount = 70m,
-            WithholdingTaxAmount = 0m,
-            TotalAmount = 1070m,
-            Currency = "THB",
-            PaymentMethod = "Cash",
-            Status = ReceiptStatus.Active,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = "test"
-        };
-        _context.Receipts.Add(receipt);
-        await _context.SaveChangesAsync();
+        // First reset to 999998, then consume one to get to 999999
+        await _context!.Database.ExecuteSqlRawAsync("ALTER SEQUENCE receipt_number_seq RESTART WITH 999998");
 
-        // Act & Assert - Trying to generate beyond 999999 should throw
+        var generator = CreateReceiptNumberGenerator();
+
+        // Consume 999998
+        var receipt998 = await generator.GenerateNextReceiptNumberAsync(entity, year);
+        Assert.Equal($"{entity}-{year}-999998", receipt998);
+
+        // Consume 999999
+        var receipt999 = await generator.GenerateNextReceiptNumberAsync(entity, year);
+        Assert.Equal($"{entity}-{year}-999999", receipt999);
+
+        // Act & Assert - Next call should exceed limit and throw
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await generator.GenerateNextReceiptNumberAsync(entity, year)
         );
@@ -270,20 +265,20 @@ public class ReceiptNumberGeneratorTests : IAsyncLifetime
     [Fact]
     public async Task GenerateNextReceiptNumber_YearRollover_ResetsSequence()
     {
-        // Arrange
+        // Arrange - sequence starts at 1 in InitializeAsync
         var entity = "MALIEV";
 
         // Create receipts in 2025
-        await GenerateAndSaveReceiptAsync(entity, 2025);
-        await GenerateAndSaveReceiptAsync(entity, 2025);
-        var lastOf2025 = await GenerateAndSaveReceiptAsync(entity, 2025);
+        await GenerateAndSaveReceiptAsync(entity, 2025);  // 000001
+        await GenerateAndSaveReceiptAsync(entity, 2025);  // 000002
+        var lastOf2025 = await GenerateAndSaveReceiptAsync(entity, 2025);  // 000003
 
         // Act - Switch to 2026
-        var firstOf2026 = await GenerateAndSaveReceiptAsync(entity, 2026);
+        var firstOf2026 = await GenerateAndSaveReceiptAsync(entity, 2026);  // 000004
 
-        // Assert
-        Assert.Matches(@"^MALIEV-2025-000003$", lastOf2025);
-        Assert.Matches(@"^MALIEV-2026-000001$", firstOf2026);  // Sequence resets
+        // Assert - With global sequence, numbers keep incrementing across years
+        Assert.Equal("MALIEV-2025-000003", lastOf2025);
+        Assert.Equal("MALIEV-2026-000004", firstOf2026);
     }
 
     // Helper methods

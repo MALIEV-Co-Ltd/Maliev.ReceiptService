@@ -14,7 +14,10 @@ namespace Maliev.ReceiptService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("receipt/v{version:apiVersion}/analytics")]
-[RequirePermission(ReceiptPermissions.Receipts.Query)] // Base permission for analytics? Or Audit?
+[Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[RequirePermission(ReceiptPermissions.Audit.Read)]
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
@@ -132,8 +135,8 @@ public class AnalyticsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetProcessingMetrics(
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate)
+        [FromQuery] DateOnly startDate,
+        [FromQuery] DateOnly endDate)
     {
         if (endDate < startDate)
         {

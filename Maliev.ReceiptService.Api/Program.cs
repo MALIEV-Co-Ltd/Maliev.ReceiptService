@@ -1,7 +1,9 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Api.Services.Metrics;
 using Maliev.ReceiptService.Infrastructure.Data;
+using MassTransit;
 
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
@@ -38,6 +40,14 @@ try
     {
         // Register PDF callback consumer
         configurator.AddConsumer<Maliev.ReceiptService.Api.Consumers.PdfGeneratedEventConsumer>();
+
+        // Enable Entity Framework transactional outbox to eliminate dual-write risk
+        // This ensures events are published atomically with database changes
+        configurator.AddEntityFrameworkOutbox<ReceiptDbContext>(options =>
+        {
+            options.UsePostgres();
+            options.UseBusOutbox();
+        });
     });
 
     // --- API Configuration ---
@@ -58,18 +68,12 @@ try
 
     builder.Services.AddControllers();
 
-    // Register Metrics
-    var meter = new System.Diagnostics.Metrics.Meter("receipts-meter");
-    var receiptsCreatedCounter = meter.CreateCounter<long>("receipts.created.total", "receipts", "Total number of receipts created");
-    var creationDurationHistogram = meter.CreateHistogram<double>("receipts.creation.duration", "milliseconds", "Receipt creation duration");
-    builder.Services.AddSingleton(receiptsCreatedCounter);
-    builder.Services.AddSingleton(creationDurationHistogram);
-
     // Application Services
     builder.Services.AddScoped<ITaxValidator, ThailandTaxValidator>();
     builder.Services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
     builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.ReceiptService>();
     builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+    builder.Services.AddSingleton<ReceiptMetrics>();
 
     // IAM Integration
     builder.AddIAMServiceClient("receipt");

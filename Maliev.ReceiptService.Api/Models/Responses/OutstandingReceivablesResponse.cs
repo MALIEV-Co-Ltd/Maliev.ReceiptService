@@ -30,6 +30,11 @@ public class OutstandingReceivablesResponse
     /// Gets or sets the top customers by outstanding amount.
     /// </summary>
     public required List<TopCustomer> TopCustomers { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the metrics are estimated/placeholder values.
+    /// </summary>
+    public bool IsEstimated { get; set; }
 }
 
 /// <summary>

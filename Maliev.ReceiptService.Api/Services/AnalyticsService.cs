@@ -12,6 +12,10 @@ namespace Maliev.ReceiptService.Api.Services;
 /// Task: T096 [US5] Implement AnalyticsService
 /// Per research.md Decision 8 and contracts/analytics-api.yaml
 /// </summary>
+/// <remarks>
+/// TODO: [ARCH-DEBT] This service should be moved to the Application layer
+/// per Clean Architecture (Api → Application → Domain ← Infrastructure).
+/// </remarks>
 public class AnalyticsService : IAnalyticsService
 {
     private readonly ReceiptDbContext _context;
@@ -76,7 +80,7 @@ public class AnalyticsService : IAnalyticsService
         // Estimate total invoices (simplified - ideally this comes from Invoice Service stats)
         // For the purpose of this calculation within Receipt Service context
         var totalInvoices = receiptedInvoicesCount > 0 ? receiptedInvoicesCount : 1;
-        var completionRate = 100m; // Default to 100% since we only know about receipted ones here
+        var completionRate = 100m; // PLACEHOLDER: Always 100% since we only know about receipted invoices
 
         var response = new PaymentCompletionResponse
         {
@@ -93,9 +97,10 @@ public class AnalyticsService : IAnalyticsService
                     TotalInvoices = totalInvoices,
                     ReceiptedInvoices = receiptedInvoicesCount,
                     CompletionRate = completionRate,
-                    AverageProcessingTime = 3.5m // Would calculate from actual data
+                    AverageProcessingTime = 3.5m // PLACEHOLDER: Would calculate from actual data
                 }
             },
+            IsEstimated = true,
             CachedAt = DateTime.UtcNow
         };
 
@@ -153,7 +158,7 @@ public class AnalyticsService : IAnalyticsService
             .Take(5)
             .ToListAsync();
 
-        // Calculate age breakdown (simplified as we don't have invoice due dates in Receipt DB)
+        // Calculate age breakdown (PLACEHOLDER: simplified as we don't have invoice due dates in Receipt DB)
         var ageBreakdown = new List<AgeBreakdown>
         {
             new AgeBreakdown { AgeRange = "0-30 days", Amount = totalOutstanding * 0.5m, Count = 0 },
@@ -168,7 +173,8 @@ public class AnalyticsService : IAnalyticsService
             TotalOutstanding = totalOutstanding,
             Currency = "THB",
             AgeBreakdown = ageBreakdown,
-            TopCustomers = topCustomers
+            TopCustomers = topCustomers,
+            IsEstimated = true
         };
 
         // Cache for 5 minutes
@@ -212,27 +218,17 @@ public class AnalyticsService : IAnalyticsService
         var startDateTime = DateTime.SpecifyKind(startDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
         var endDateTime = DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
 
-        // Query receipts
+        // Query receipts - push counting to database instead of loading all into memory
         var query = _context.Receipts
             .Where(r => r.IssueDate >= startDateTime && r.IssueDate <= endDateTime);
 
-        var receipts = await query
-            .Select(r => new
-            {
-                r.Status,
-                r.PaymentMethod,
-                r.IssueDate,
-                r.CreatedAt
-            })
-            .ToListAsync();
-
-        var totalReceipts = receipts.Count;
-        var voidedReceipts = receipts.Count(r => r.Status == ReceiptStatus.Void);
+        var totalReceipts = await query.CountAsync();
+        var voidedReceipts = await query.CountAsync(r => r.Status == ReceiptStatus.Void);
         var voidRate = totalReceipts > 0 ? (decimal)voidedReceipts / totalReceipts * 100 : 0;
 
-        // Payment method stats
-        var paymentMethods = receipts
-            .Where(r => !string.IsNullOrEmpty(r.PaymentMethod))
+        // Payment method stats - do grouping in database
+        var paymentMethods = await query
+            .Where(r => r.PaymentMethod != null && r.PaymentMethod != "")
             .GroupBy(r => r.PaymentMethod)
             .Select(g => new PaymentMethodStats
             {
@@ -241,15 +237,16 @@ public class AnalyticsService : IAnalyticsService
                 Percentage = totalReceipts > 0 ? Math.Round((decimal)g.Count() / totalReceipts * 100, 2) : 0
             })
             .OrderByDescending(p => p.Count)
-            .ToList();
+            .ToListAsync();
 
         var response = new PaymentBehaviorResponse
         {
             CustomerId = customerId,
-            AverageTimeToPayDays = 15.5m, // Would calculate from invoice due dates
-            PartialPaymentFrequency = 12.3m, // Would calculate from balance tracker data
+            AverageTimeToPayDays = 15.5m, // PLACEHOLDER: Would calculate from invoice due dates
+            PartialPaymentFrequency = 12.3m, // PLACEHOLDER: Would calculate from balance tracker data
             VoidRate = Math.Round(voidRate, 2),
-            PaymentMethods = paymentMethods
+            PaymentMethods = paymentMethods,
+            IsEstimated = true
         };
 
         // Cache for 5 minutes
@@ -271,14 +268,14 @@ public class AnalyticsService : IAnalyticsService
     /// <summary>
     /// Gets processing metrics for a given period.
     /// </summary>
-    /// <param name="startDate">The start date and time.</param>
-    /// <param name="endDate">The end date and time.</param>
+    /// <param name="startDate">The start date.</param>
+    /// <param name="endDate">The end date.</param>
     /// <returns>The processing metrics response.</returns>
     public async Task<ProcessingMetricsResponse> GetProcessingMetricsAsync(
-        DateTime startDate,
-        DateTime endDate)
+        DateOnly startDate,
+        DateOnly endDate)
     {
-        var cacheKey = $"analytics:processing-metrics:{startDate:yyyy-MM-dd-HH-mm}:{endDate:yyyy-MM-dd-HH-mm}";
+        var cacheKey = $"analytics:processing-metrics:{startDate:yyyy-MM-dd}:{endDate:yyyy-MM-dd}";
 
         // Try cache first
         var cached = await _cache.GetStringAsync(cacheKey);
@@ -288,16 +285,16 @@ public class AnalyticsService : IAnalyticsService
             return JsonSerializer.Deserialize<ProcessingMetricsResponse>(cached)!;
         }
 
-        var startUtc = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
-        var endUtc = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+        var startDateTime = DateTime.SpecifyKind(startDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var endDateTime = DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
 
         _logger.LogInformation(
             "Calculating processing metrics: {StartDate} to {EndDate}",
-            startUtc, endUtc);
+            startDateTime, endDateTime);
 
         // Query receipts for processing time analysis
         var receipts = await _context.Receipts
-            .Where(r => r.CreatedAt >= startUtc && r.CreatedAt <= endUtc)
+            .Where(r => r.CreatedAt >= startDateTime && r.CreatedAt <= endDateTime)
             .Select(r => new
             {
                 r.CreatedAt,
@@ -313,8 +310,8 @@ public class AnalyticsService : IAnalyticsService
         {
             Period = new TimePeriod
             {
-                Start = startDate,
-                End = endDate
+                Start = startDate.ToDateTime(TimeOnly.MinValue),
+                End = endDate.ToDateTime(TimeOnly.MaxValue)
             },
             ReceiptCreation = new ReceiptCreationMetrics
             {
@@ -327,14 +324,15 @@ public class AnalyticsService : IAnalyticsService
             InvoiceServiceCalls = new InvoiceServiceMetrics
             {
                 AverageDuration = 1.2m,
-                TimeoutCount = totalCreated / 1000, // Estimate: 0.1% timeout rate
-                RetryCount = totalCreated / 200 // Estimate: 0.5% retry rate
+                TimeoutCount = totalCreated / 1000, // PLACEHOLDER: 0.1% timeout rate estimate
+                RetryCount = totalCreated / 200 // PLACEHOLDER: 0.5% retry rate estimate
             },
             PdfEventPublishing = new PdfEventMetrics
             {
                 AverageDuration = 0.4m,
-                FailureCount = totalCreated / 5000 // Estimate: 0.02% failure rate
-            }
+                FailureCount = totalCreated / 5000 // PLACEHOLDER: 0.02% failure rate estimate
+            },
+            IsEstimated = true
         };
 
         // Cache for 5 minutes

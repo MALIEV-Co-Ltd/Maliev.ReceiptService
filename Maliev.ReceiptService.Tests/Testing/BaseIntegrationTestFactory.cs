@@ -63,10 +63,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             {
                 _postgresContainer = new PostgreSqlBuilder("postgres:18-alpine")
                     .Build();
-
                 _redisContainer = new RedisBuilder("redis:8.4-alpine")
                     .Build();
-
                 _rabbitmqContainer = new RabbitMqBuilder("rabbitmq:4.2-alpine")
                     .Build();
 
@@ -320,6 +318,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             DROP TABLE IF EXISTS ""receipt_audit_events"" CASCADE;
             DROP TABLE IF EXISTS ""receipts"" CASCADE;
             DROP TABLE IF EXISTS ""invoice_balance_trackers"" CASCADE;
+            DROP TABLE IF EXISTS ""inbox_state"" CASCADE;
+            DROP TABLE IF EXISTS ""outbox_message"" CASCADE;
+            DROP TABLE IF EXISTS ""outbox_state"" CASCADE;
             DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;
         ");
 
@@ -358,6 +359,16 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             {
                 // Table doesn't exist - ignore this error
             }
+        }
+
+        // Reset standalone sequences (not RESTART IDENTITY which only affects table identity columns)
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER SEQUENCE receipt_number_seq RESTART WITH 1");
+        }
+        catch (Npgsql.PostgresException ex) when (ex.SqlState == "42703")
+        {
+            // Sequence doesn't exist - ignore this error
         }
     }
 

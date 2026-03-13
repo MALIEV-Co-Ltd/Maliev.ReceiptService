@@ -46,7 +46,7 @@ public class PdfGeneratedEventIntegrationTests : BaseReceiptIntegrationTest
         var message = new PdfGenerationCompletedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "PdfGenerationCompletedEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "PdfService",
             ConsumedBy: new[] { "ReceiptService" },

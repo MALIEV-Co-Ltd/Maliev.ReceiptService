@@ -25,5 +25,9 @@
     <ProjectReference Include="..\Maliev.ReceiptService.Infrastructure\Maliev.ReceiptService.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="[8.5.8, 9.0.0)" />
+  </ItemGroup>
+
 
 </Project>

@@ -17,6 +17,11 @@ public class PaymentCompletionResponse
     public required List<CompletionMetric> Metrics { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the metrics are estimated/placeholder values.
+    /// </summary>
+    public bool IsEstimated { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional date and time when the data was cached.
     /// </summary>
     public DateTime? CachedAt { get; set; }

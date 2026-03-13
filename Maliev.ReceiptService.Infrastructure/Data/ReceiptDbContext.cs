@@ -1,5 +1,6 @@
 using Maliev.Aspire.ServiceDefaults.Database;
 using Maliev.ReceiptService.Domain.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.ReceiptService.Infrastructure.Data;
@@ -16,6 +17,11 @@ public class ReceiptDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // MassTransit transactional outbox entities
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
 
         modelBuilder.Entity<Receipt>(entity =>
         {
@@ -43,6 +49,10 @@ public class ReceiptDbContext : DbContext
 
             entity.Property(e => e.Status)
                 .HasConversion<string>();
+
+            entity.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
 
             entity.HasMany(e => e.LineItems)
                 .WithOne(e => e.Receipt)
@@ -73,6 +83,10 @@ public class ReceiptDbContext : DbContext
 
             entity.Property(e => e.LineTotal)
                 .HasColumnType("decimal(18,2)");
+
+            entity.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
         });
 
         modelBuilder.Entity<ReceiptAuditEvent>(entity =>
@@ -86,6 +100,10 @@ public class ReceiptDbContext : DbContext
 
             entity.Property(e => e.EventType)
                 .HasConversion<string>();
+
+            entity.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
         });
 
         modelBuilder.Entity<InvoiceBalanceTracker>(entity =>
@@ -103,7 +121,16 @@ public class ReceiptDbContext : DbContext
 
             entity.Property(e => e.RemainingBalance)
                 .HasColumnType("decimal(18,2)");
+
+            entity.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
         });
+
+        // PostgreSQL sequence for atomic receipt number generation
+        modelBuilder.HasSequence<int>("receipt_number_seq")
+            .StartsAt(1)
+            .IncrementsBy(1);
 
         SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }

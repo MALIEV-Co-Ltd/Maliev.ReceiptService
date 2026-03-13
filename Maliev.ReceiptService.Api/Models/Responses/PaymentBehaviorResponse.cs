@@ -30,6 +30,11 @@ public class PaymentBehaviorResponse
     /// Gets or sets the payment method statistics.
     /// </summary>
     public required List<PaymentMethodStats> PaymentMethods { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the metrics are estimated/placeholder values.
+    /// </summary>
+    public bool IsEstimated { get; set; }
 }
 
 /// <summary>

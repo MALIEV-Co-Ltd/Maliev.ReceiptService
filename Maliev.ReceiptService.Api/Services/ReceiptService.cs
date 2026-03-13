@@ -5,6 +5,7 @@ using Maliev.ReceiptService.Api.Extensions;
 using Maliev.ReceiptService.Api.Models.Dtos;
 using Maliev.ReceiptService.Api.Models.Requests;
 using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Api.Services.Metrics;
 using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Domain.Entities;
 using Maliev.ReceiptService.Domain.Enums;
@@ -20,6 +21,10 @@ namespace Maliev.ReceiptService.Api.Services;
 /// Receipt service implementation per quickstart.md Step 4.1
 /// Handles receipt creation with tax validation, balance tracking, numbering, and PDF event publishing
 /// </summary>
+/// <remarks>
+/// TODO: [ARCH-DEBT] This service should be moved to the Application layer
+/// per Clean Architecture (Api → Application → Domain ← Infrastructure).
+/// </remarks>
 public class ReceiptService : IReceiptService
 {
     private readonly ReceiptDbContext _context;
@@ -28,8 +33,7 @@ public class ReceiptService : IReceiptService
     private readonly IReceiptNumberGenerator _numberGenerator;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<ReceiptService> _logger;
-    private readonly Counter<long> _receiptsCreatedCounter;
-    private readonly Histogram<double> _creationDurationHistogram;
+    private readonly ReceiptMetrics _metrics;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReceiptService"/> class.
@@ -40,8 +44,7 @@ public class ReceiptService : IReceiptService
     /// <param name="numberGenerator">The receipt number generator.</param>
     /// <param name="publishEndpoint">The publish endpoint.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="receiptsCreatedCounter">The receipts created counter.</param>
-    /// <param name="creationDurationHistogram">The creation duration histogram.</param>
+    /// <param name="metrics">The receipt metrics.</param>
     public ReceiptService(
         ReceiptDbContext context,
         IInvoiceServiceClient invoiceClient,
@@ -49,8 +52,7 @@ public class ReceiptService : IReceiptService
         IReceiptNumberGenerator numberGenerator,
         IPublishEndpoint publishEndpoint,
         ILogger<ReceiptService> logger,
-        Counter<long> receiptsCreatedCounter,
-        Histogram<double> creationDurationHistogram)
+        ReceiptMetrics metrics)
     {
         _context = context;
         _invoiceClient = invoiceClient;
@@ -58,8 +60,7 @@ public class ReceiptService : IReceiptService
         _numberGenerator = numberGenerator;
         _publishEndpoint = publishEndpoint;
         _logger = logger;
-        _receiptsCreatedCounter = receiptsCreatedCounter;
-        _creationDurationHistogram = creationDurationHistogram;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -241,11 +242,11 @@ public class ReceiptService : IReceiptService
             "Receipt created: {ReceiptNumber} for invoice {InvoiceId}",
             receiptNumber, request.InvoiceId);
 
-        // Step 9.5: Publish ReceiptCreatedEvent
+        // Step 9.5: Publish ReceiptCreatedEvent (outbox guarantees atomic delivery with SaveChanges)
         await _publishEndpoint.Publish(new ReceiptCreatedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptCreatedEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "ReceiptService",
             ConsumedBy: ["NotificationService", "AnalyticsService"],
@@ -273,7 +274,7 @@ public class ReceiptService : IReceiptService
         var pdfEvent = new ReceiptPdfRequestedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: nameof(ReceiptPdfRequestedEvent),
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "ReceiptService",
             ConsumedBy: ["PdfService"],
@@ -324,8 +325,8 @@ public class ReceiptService : IReceiptService
 
         // Record metrics (per research.md Decision 9, FR-031)
         stopwatch.Stop();
-        _receiptsCreatedCounter.Add(1, new KeyValuePair<string, object?>("service.name", "ReceiptService"));
-        _creationDurationHistogram.Record(stopwatch.Elapsed.TotalSeconds, new KeyValuePair<string, object?>("service.name", "ReceiptService"));
+        _metrics.ReceiptsCreated.Add(1, new KeyValuePair<string, object?>("service.name", "ReceiptService"));
+        _metrics.CreationDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new KeyValuePair<string, object?>("service.name", "ReceiptService"));
 
         _logger.LogInformation(
             "Receipt created successfully: {ReceiptNumber}, duration: {Duration}ms",
@@ -343,6 +344,7 @@ public class ReceiptService : IReceiptService
     {
         var receipt = await _context.Receipts
             .Include(r => r.LineItems)
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id);
 
         return receipt?.ToResponse();
@@ -379,6 +381,7 @@ public class ReceiptService : IReceiptService
         // Build query with filters
         var query = _context.Receipts
             .Include(r => r.LineItems)
+            .AsNoTracking()
             .AsQueryable();
 
         if (invoiceId.HasValue)
@@ -541,11 +544,11 @@ public class ReceiptService : IReceiptService
         // Step 6: Save changes
         await _context.SaveChangesAsync();
 
-        // Step 7: Publish ReceiptVoidedEvent
+        // Step 7: Publish ReceiptVoidedEvent (outbox guarantees atomic delivery with SaveChanges)
         await _publishEndpoint.Publish(new ReceiptVoidedEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptVoidedEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "ReceiptService",
             ConsumedBy: ["NotificationService", "AnalyticsService"],
@@ -592,6 +595,7 @@ public class ReceiptService : IReceiptService
         var auditEvents = await _context.ReceiptAuditEvents
             .Where(e => e.ReceiptId == receiptId)
             .OrderBy(e => e.Timestamp)
+            .AsNoTracking()
             .ToListAsync();
 
         _logger.LogInformation(
@@ -695,11 +699,11 @@ public class ReceiptService : IReceiptService
             throw new ReceiptBusinessRuleException("Receipt PDF has not been generated yet");
         }
 
-        // Publish ReceiptSentEvent
+        // Publish ReceiptSentEvent (outbox guarantees delivery)
         await _publishEndpoint.Publish(new ReceiptSentEvent(
             MessageId: Guid.NewGuid(),
             MessageName: "ReceiptSentEvent",
-            MessageType: MessageType.Event,
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
             MessageVersion: "1.0.0",
             PublishedBy: "ReceiptService",
             ConsumedBy: ["NotificationService"],

@@ -7,6 +7,10 @@ namespace Maliev.ReceiptService.Api.Services;
 /// Thailand-specific tax validator per research.md Decision 7
 /// Validates Thai tax compliance requirements for receipts
 /// </summary>
+/// <remarks>
+/// TODO: [ARCH-DEBT] This validator should be moved to the Application layer
+/// per Clean Architecture (Api → Application → Domain ← Infrastructure).
+/// </remarks>
 public class ThailandTaxValidator : ITaxValidator
 {
     private const decimal ThailandVatRate = 7.0m;
