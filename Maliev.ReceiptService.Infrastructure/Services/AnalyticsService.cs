@@ -1,21 +1,19 @@
-using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Application.Models.Responses;
+using Maliev.ReceiptService.Application.Services;
 using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace Maliev.ReceiptService.Api.Services;
+namespace Maliev.ReceiptService.Infrastructure.Services;
 
 /// <summary>
 /// Analytics service implementation with Redis caching (5-min TTL)
 /// Task: T096 [US5] Implement AnalyticsService
 /// Per research.md Decision 8 and contracts/analytics-api.yaml
 /// </summary>
-/// <remarks>
-/// TODO: [ARCH-DEBT] This service should be moved to the Application layer
-/// per Clean Architecture (Api → Application → Domain ← Infrastructure).
-/// </remarks>
 public class AnalyticsService : IAnalyticsService
 {
     private readonly ReceiptDbContext _context;

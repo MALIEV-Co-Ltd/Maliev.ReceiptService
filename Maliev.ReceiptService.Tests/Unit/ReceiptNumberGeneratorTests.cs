@@ -2,7 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Domain.Entities;
 using Maliev.ReceiptService.Domain.Enums;
-using Maliev.ReceiptService.Api.Services;
+using Maliev.ReceiptService.Application.Ports;
+using Maliev.ReceiptService.Infrastructure.Services;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Unit;

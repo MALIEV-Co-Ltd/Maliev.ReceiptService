@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Maliev.ReceiptService.Api.Models.Requests;
+using Maliev.ReceiptService.Application.Models.Requests;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Integration;
@@ -314,4 +314,3 @@ public class SplitInvoiceReceiptTests : BaseReceiptIntegrationTest
         Assert.DoesNotContain(segment3Id.ToString(), segmentIds); // Segment 3 is outstanding
     }
 }
-

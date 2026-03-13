@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Maliev.ReceiptService.Api.Models.Requests;
+using Maliev.ReceiptService.Application.Models.Requests;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Integration;
@@ -233,4 +233,3 @@ public class PartialPaymentTests : BaseReceiptIntegrationTest
         Assert.Contains(HttpStatusCode.Conflict, statusCodes);
     }
 }
-

@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Maliev.ReceiptService.Api.Models.Requests;
-using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Application.Models.Requests;
+using Maliev.ReceiptService.Application.Models.Responses;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Contract;

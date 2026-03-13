@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
-using Maliev.ReceiptService.Api.Models.Requests;
+using Maliev.ReceiptService.Application.Models.Requests;
 
 namespace Maliev.ReceiptService.Tests.Integration;
 

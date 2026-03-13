@@ -1,6 +1,6 @@
-using Maliev.ReceiptService.Api.Models.Dtos;
-using Maliev.ReceiptService.Api.Models.Requests;
-using Maliev.ReceiptService.Api.Services;
+using Maliev.ReceiptService.Application.Models.Dtos;
+using Maliev.ReceiptService.Application.Models.Requests;
+using Maliev.ReceiptService.Application.Services;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Unit;

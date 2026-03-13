@@ -1,4 +1,4 @@
-using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Application.Models.Responses;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Unit;

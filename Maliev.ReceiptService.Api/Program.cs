@@ -1,8 +1,10 @@
 using Maliev.Aspire.ServiceDefaults;
-using Maliev.ReceiptService.Api.Services;
 using Maliev.ReceiptService.Api.Services.IAM;
-using Maliev.ReceiptService.Api.Services.Metrics;
+using Maliev.ReceiptService.Application.Metrics;
+using Maliev.ReceiptService.Application.Ports;
+using Maliev.ReceiptService.Application.Services;
 using Maliev.ReceiptService.Infrastructure.Data;
+using Maliev.ReceiptService.Infrastructure.ExternalServices;
 using MassTransit;
 
 // Initialize bootstrap logging
@@ -68,11 +70,11 @@ try
 
     builder.Services.AddControllers();
 
-    // Application Services
+    // Application Services (implementations live in Infrastructure layer per Clean Architecture)
     builder.Services.AddScoped<ITaxValidator, ThailandTaxValidator>();
-    builder.Services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
-    builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Api.Services.ReceiptService>();
-    builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+    builder.Services.AddScoped<IReceiptNumberGenerator, Maliev.ReceiptService.Infrastructure.Services.ReceiptNumberGenerator>();
+    builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Infrastructure.Services.ReceiptService>();
+    builder.Services.AddScoped<IAnalyticsService, Maliev.ReceiptService.Infrastructure.Services.AnalyticsService>();
     builder.Services.AddSingleton<ReceiptMetrics>();
 
     // IAM Integration
@@ -80,7 +82,7 @@ try
     builder.Services.AddIAMRegistration<ReceiptIAMRegistrationService>("receipt");
 
     // External Service Clients with Polly v8 Resilience
-    builder.AddServiceClient<IInvoiceServiceClient, InvoiceServiceClient>("InvoiceService");
+    builder.AddServiceClient<IInvoiceServiceClient, Maliev.ReceiptService.Infrastructure.ExternalServices.InvoiceServiceClient>("InvoiceService");
 
     var app = builder.Build();
     var logger = app.Services.GetRequiredService<ILogger<Program>>();

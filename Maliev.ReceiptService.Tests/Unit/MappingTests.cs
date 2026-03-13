@@ -1,4 +1,4 @@
-using Maliev.ReceiptService.Api.Extensions;
+using Maliev.ReceiptService.Application.Mappings;
 using Maliev.ReceiptService.Domain.Entities;
 using Maliev.ReceiptService.Domain.Enums;
 using Xunit;

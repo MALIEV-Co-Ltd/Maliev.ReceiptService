@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Application.Models.Responses;
 using Maliev.ReceiptService.Api.Services.IAM;
 using Maliev.ReceiptService.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;

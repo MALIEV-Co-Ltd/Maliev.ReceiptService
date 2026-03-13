@@ -4,8 +4,8 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Maliev.ReceiptService.Infrastructure.Data;
-using Maliev.ReceiptService.Api.Models.Requests;
-using Maliev.ReceiptService.Api.Models.Responses;
+using Maliev.ReceiptService.Application.Models.Requests;
+using Maliev.ReceiptService.Application.Models.Responses;
 using Xunit;
 
 namespace Maliev.ReceiptService.Tests.Integration;
