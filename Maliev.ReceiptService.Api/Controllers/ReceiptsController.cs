@@ -14,7 +14,7 @@ namespace Maliev.ReceiptService.Api.Controllers;
 /// Receipts API controller per contracts/receipts-api.yaml
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("receipt/v{version:apiVersion}/receipts")]
 [Produces("application/json")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
