@@ -1,5 +1,6 @@
 using Maliev.Aspire.ServiceDefaults.Testing;
 using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Application.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;

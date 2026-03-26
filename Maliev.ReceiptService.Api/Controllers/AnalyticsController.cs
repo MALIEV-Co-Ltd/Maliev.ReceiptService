@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
-using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 

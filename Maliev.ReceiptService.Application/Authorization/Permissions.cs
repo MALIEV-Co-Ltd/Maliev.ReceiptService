@@ -1,4 +1,4 @@
-namespace Maliev.ReceiptService.Api.Services.IAM;
+namespace Maliev.ReceiptService.Application.Authorization;
 
 /// <summary>
 /// Defines permission constants for the Receipt Service.

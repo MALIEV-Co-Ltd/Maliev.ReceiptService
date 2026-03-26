@@ -1,5 +1,6 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Application.Metrics;
 using Maliev.ReceiptService.Application.Ports;
 using Maliev.ReceiptService.Application.Services;

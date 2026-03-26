@@ -1,4 +1,5 @@
 using Maliev.Aspire.ServiceDefaults.IAM;
+using Maliev.ReceiptService.Application.Authorization;
 
 namespace Maliev.ReceiptService.Api.Services.IAM;
 

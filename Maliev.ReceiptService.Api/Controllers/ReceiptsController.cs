@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.ReceiptService.Application.Exceptions;
 using Maliev.ReceiptService.Application.Models.Requests;
-using Maliev.ReceiptService.Api.Services.IAM;
+using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Application.Services;
 using Maliev.ReceiptService.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;

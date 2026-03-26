@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Maliev.ReceiptService.Infrastructure.Migrations
+namespace Maliev.ReceiptService.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ReceiptDbContext))]
     partial class ReceiptDbContextModelSnapshot : ModelSnapshot
@@ -17,7 +17,7 @@ namespace Maliev.ReceiptService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
