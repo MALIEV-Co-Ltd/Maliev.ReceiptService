@@ -205,12 +205,6 @@ public class ReceiptCreationTests : BaseReceiptIntegrationTest
     [Fact]
     public async Task CreateReceipt_WithInvoiceServiceDown_ReturnsServiceUnavailable()
     {
-        // This test requires configuring the HTTP client with proper retry policies
-        // and timeout handling. The WireMock stub returns 503, but the HTTP client
-        // retry logic needs to be properly configured to propagate the error.
-
-        // TODO: Implement proper HTTP client factory mocking to test service failures
-
         var request = new
         {
             invoiceId = "00000000-0000-0000-0000-000000000001",
