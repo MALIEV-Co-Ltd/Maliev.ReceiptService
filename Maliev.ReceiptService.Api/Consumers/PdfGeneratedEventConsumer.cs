@@ -50,6 +50,15 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
     {
         var payload = context.Message.Payload;
 
+        if (!string.Equals(payload.DocumentType, "Receipt", StringComparison.Ordinal))
+        {
+            _logger.LogInformation(
+                "Skipping non-receipt document: DocumentType={DocumentType}, ReferenceId={ReferenceId}",
+                payload.DocumentType,
+                payload.ReferenceId);
+            return;
+        }
+
         // ReferenceId contains the ReceiptId
         if (!Guid.TryParse(payload.ReferenceId, out var receiptId))
         {
