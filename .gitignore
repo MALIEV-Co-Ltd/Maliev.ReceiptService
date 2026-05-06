@@ -12,6 +12,8 @@ artifacts/
 *.swo
 *~
 *.user
+*.csproj.user
+*.rsuser
 *.suo
 *.userosscache
 *.sln.docstates
