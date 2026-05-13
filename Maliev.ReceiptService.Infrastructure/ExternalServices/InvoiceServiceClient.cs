@@ -52,7 +52,7 @@ public class InvoiceServiceClient : IInvoiceServiceClient
             response.EnsureSuccessStatusCode();
 
             var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            var invoice = JsonSerializer.Deserialize<InvoiceDto>(jsonContent, JsonOptions);
+            var invoice = JsonSerializer.Deserialize<InvoiceServiceInvoiceResponse>(jsonContent, JsonOptions)?.ToInvoiceDto();
 
             _logger.LogInformation("Successfully fetched invoice {InvoiceId}", invoiceId);
 
@@ -62,6 +62,163 @@ public class InvoiceServiceClient : IInvoiceServiceClient
         {
             _logger.LogError(ex, "Error fetching invoice {InvoiceId} from Invoice Service", invoiceId);
             throw;
+        }
+    }
+
+    private sealed class InvoiceServiceInvoiceResponse
+    {
+        public Guid Id { get; set; }
+
+        public Guid InvoiceId { get; set; }
+
+        public string? InvoiceNumber { get; set; }
+
+        public DateTime IssueDate { get; set; }
+
+        public DateTime IssuedDate { get; set; }
+
+        public DateTime? DueDate { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
+        public Guid CustomerId { get; set; }
+
+        public string CustomerName { get; set; } = string.Empty;
+
+        public string CustomerTaxId { get; set; } = string.Empty;
+
+        public string CustomerAddress { get; set; } = string.Empty;
+
+        public string BillingAddress { get; set; } = string.Empty;
+
+        public decimal Subtotal { get; set; }
+
+        public decimal TaxAmount { get; set; }
+
+        public decimal VatAmount { get; set; }
+
+        public decimal WithholdingTaxAmount { get; set; }
+
+        public decimal VatRate { get; set; }
+
+        public decimal TotalAmount { get; set; }
+
+        public decimal GrandTotal { get; set; }
+
+        public string Currency { get; set; } = "THB";
+
+        public DateTime CreatedAt { get; set; }
+
+        public string? CreatedBy { get; set; }
+
+        public List<InvoiceServiceInvoiceLineResponse> Lines { get; set; } = new();
+
+        public List<InvoiceServiceInvoiceLineResponse> LineItems { get; set; } = new();
+
+        public List<InvoiceServiceInvoiceSegmentResponse> Segments { get; set; } = new();
+
+        public InvoiceDto ToInvoiceDto()
+        {
+            var lineItems = Lines.Count > 0 ? Lines : LineItems;
+
+            return new InvoiceDto
+            {
+                Id = Id == Guid.Empty ? InvoiceId : Id,
+                InvoiceNumber = InvoiceNumber ?? string.Empty,
+                IssueDate = IssueDate == default ? IssuedDate : IssueDate,
+                DueDate = DueDate,
+                Status = Status,
+                CustomerId = CustomerId,
+                CustomerName = CustomerName,
+                CustomerTaxId = CustomerTaxId,
+                CustomerAddress = string.IsNullOrWhiteSpace(BillingAddress) ? CustomerAddress : BillingAddress,
+                Subtotal = Subtotal,
+                TaxAmount = TaxAmount == 0m ? VatAmount : TaxAmount,
+                WithholdingTaxAmount = WithholdingTaxAmount,
+                TotalAmount = GrandTotal == 0m ? TotalAmount : GrandTotal,
+                Currency = Currency,
+                VatRate = ResolveVatRate(lineItems),
+                LineItems = lineItems.Select(line => line.ToInvoiceLineItemDto()).ToList(),
+                Segments = Segments.Select(segment => segment.ToInvoiceSegmentDto()).ToList(),
+                CreatedAt = CreatedAt,
+                CreatedBy = CreatedBy ?? string.Empty
+            };
+        }
+
+        private decimal ResolveVatRate(IReadOnlyCollection<InvoiceServiceInvoiceLineResponse> lineItems)
+        {
+            if (VatRate > 0)
+            {
+                return VatRate;
+            }
+
+            if (lineItems.Count > 0)
+            {
+                return lineItems.Max(line => line.TaxRate);
+            }
+
+            return Subtotal > 0
+                ? Math.Round((TaxAmount == 0m ? VatAmount : TaxAmount) / Subtotal * 100m, 2)
+                : 0m;
+        }
+    }
+
+    private sealed class InvoiceServiceInvoiceLineResponse
+    {
+        public Guid Id { get; set; }
+
+        public int LineNumber { get; set; }
+
+        public string Description { get; set; } = string.Empty;
+
+        public decimal Quantity { get; set; }
+
+        public decimal UnitPrice { get; set; }
+
+        public decimal TaxRate { get; set; }
+
+        public decimal LineTotal { get; set; }
+
+        public InvoiceLineItemDto ToInvoiceLineItemDto()
+        {
+            return new InvoiceLineItemDto
+            {
+                Id = Id,
+                LineNumber = LineNumber,
+                Description = Description,
+                Quantity = Quantity,
+                UnitPrice = UnitPrice,
+                TaxRate = TaxRate,
+                LineTotal = LineTotal
+            };
+        }
+    }
+
+    private sealed class InvoiceServiceInvoiceSegmentResponse
+    {
+        public Guid SegmentId { get; set; }
+
+        public string SegmentName { get; set; } = string.Empty;
+
+        public decimal SegmentAmount { get; set; }
+
+        public decimal SegmentTaxRate { get; set; }
+
+        public decimal SegmentTotal { get; set; }
+
+        public List<Guid> LineItemIds { get; set; } = new();
+
+        public InvoiceSegmentDto ToInvoiceSegmentDto()
+        {
+            return new InvoiceSegmentDto
+            {
+                SegmentId = SegmentId,
+                SegmentName = SegmentName,
+                SegmentAmount = SegmentAmount,
+                SegmentTaxRate = SegmentTaxRate,
+                SegmentTotal = SegmentTotal,
+                LineItemIds = LineItemIds
+            };
         }
     }
 }
