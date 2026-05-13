@@ -41,7 +41,7 @@ public class InvoiceServiceClient : IInvoiceServiceClient
         {
             _logger.LogInformation("Fetching invoice {InvoiceId} from Invoice Service", invoiceId);
 
-            var response = await _httpClient.GetAsync($"invoices/{invoiceId}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/invoice/v1/invoices/{invoiceId}", cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {

@@ -84,7 +84,7 @@ try
     builder.Services.AddIAMRegistration<ReceiptIAMRegistrationService>("receipt");
 
     // External Service Clients with Polly v8 Resilience
-    builder.AddServiceClient<IInvoiceServiceClient, Maliev.ReceiptService.Infrastructure.ExternalServices.InvoiceServiceClient>("InvoiceService");
+    builder.AddAuthenticatedServiceClient<IInvoiceServiceClient, Maliev.ReceiptService.Infrastructure.ExternalServices.InvoiceServiceClient>("InvoiceService", "receipt");
 
     var app = builder.Build();
     var logger = app.Services.GetRequiredService<ILogger<Program>>();

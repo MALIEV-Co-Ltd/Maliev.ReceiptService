@@ -115,7 +115,7 @@ public class ReceiptCreatorScopeTests : BaseReceiptIntegrationTest
     private void StubInvoice(Guid invoiceId, string createdBy)
     {
         Factory.InvoiceServiceMock
-            .Given(Request.Create().WithPath($"/v1/invoices/{invoiceId}").UsingGet())
+            .Given(Request.Create().WithPath($"/invoice/v1/invoices/{invoiceId}").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)

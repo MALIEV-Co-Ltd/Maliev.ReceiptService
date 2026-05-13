@@ -212,7 +212,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                     ValidateAudience = false,
                     ValidateLifetime = false,
                     ValidateIssuerSigningKey = false,
-                    SignatureValidator = (token, parameters) => new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(token),
+                    SignatureValidator = (token, parameters) => new JwtSecurityToken(token),
                     NameClaimType = JwtRegisteredClaimNames.Sub, // Use "sub" claim as name identifier
                     RoleClaimType = "role" // Use "role" claim for roles
                 };

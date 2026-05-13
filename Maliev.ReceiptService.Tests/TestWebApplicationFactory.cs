@@ -59,7 +59,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Non-existent invoice (all zeros)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/00000000-0000-0000-0000-000000000000").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/00000000-0000-0000-0000-000000000000").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(404)
@@ -72,7 +72,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Service unavailable simulation (for timeout/failure tests)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/00000000-0000-0000-0000-000000000001").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/00000000-0000-0000-0000-000000000001").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(503)
@@ -85,7 +85,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with missing tax fields (for tax validation tests)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/11111111-1111-1111-1111-111111111111").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/11111111-1111-1111-1111-111111111111").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -120,7 +120,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with invalid VAT rate (22222222...)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/22222222-2222-2222-2222-222222222222").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/22222222-2222-2222-2222-222222222222").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -144,7 +144,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with negative withholding tax rate
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/33333333-3333-3333-3333-333333333333").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/33333333-3333-3333-3333-333333333333").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -170,7 +170,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with excessive withholding tax rate (> 100%)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/44444444-4444-4444-4444-444444444444").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/44444444-4444-4444-4444-444444444444").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -196,7 +196,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with multiple tax errors
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/55555555-5555-5555-5555-555555555555").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/55555555-5555-5555-5555-555555555555").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -222,7 +222,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice for testing invalid tax (88888888...)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/88888888-8888-8888-8888-888888888888").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/88888888-8888-8888-8888-888888888888").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -257,7 +257,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice for testing correlation ID in error (99999999...)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/99999999-9999-9999-9999-999999999999").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/99999999-9999-9999-9999-999999999999").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -292,7 +292,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice for testing PDF event not published (bbbb0000...)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/bbbb0000-0000-0000-0000-000000000001").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/bbbb0000-0000-0000-0000-000000000001").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -327,7 +327,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice with empty tax ID string (cccc0000...)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/cccc0000-0000-0000-0000-000000000001").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/cccc0000-0000-0000-0000-000000000001").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -378,7 +378,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
             var totalAmount = subtotal + vatAmount - withholdingAmount;
 
             _invoiceServiceMock
-                .Given(Request.Create().WithPath($"/v1/invoices/{invoiceIdStr}").UsingGet())
+                .Given(Request.Create().WithPath($"/invoice/v1/invoices/{invoiceIdStr}").UsingGet())
                 .AtPriority(1)
                 .RespondWith(WireMockResponse.Create()
                     .WithStatusCode(200)
@@ -405,7 +405,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Default response for all other invoices - returns a valid invoice with proper Thai tax fields
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/*").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/*").UsingGet())
             .AtPriority(10)  // Lower priority than specific mocks
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -441,7 +441,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
         // Split Invoice stubs for SplitInvoiceReceiptTests
         // Invoice 550e8400-e29b-41d4-a716-446655440030 with 3 segments
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440030").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440030").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -535,7 +535,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440031 - multiple segments test
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440031").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440031").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -610,7 +610,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440032 - segment-specific tax test
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440032").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440032").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -666,7 +666,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440033 - withholding tax segment test
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440033").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440033").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -725,7 +725,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440034 - GetReceipts_FilterByInvoiceId_ShowsSegmentReceiptingStatus
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440034").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440034").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -800,7 +800,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440035 - GetReceipts_FilterBySegmentId_ReturnsOnlySegmentReceipts
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440035").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440035").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -875,7 +875,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
 
         // Invoice 550e8400-e29b-41d4-a716-446655440036 - GetReceipts_ForSplitInvoice_ProvidesSegmentStatusOverview (3 segments)
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/550e8400-e29b-41d4-a716-446655440036").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/550e8400-e29b-41d4-a716-446655440036").UsingGet())
             .AtPriority(1)
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
@@ -970,7 +970,7 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Rec
         // Catch-all stub for any other invoice ID
         // Returns a valid generic invoice with 2140.00 total (2000 + 7% VAT) to accommodate most tests
         _invoiceServiceMock
-            .Given(Request.Create().WithPath("/v1/invoices/*").UsingGet())
+            .Given(Request.Create().WithPath("/invoice/v1/invoices/*").UsingGet())
             .AtPriority(999) // Lowest priority - only matches if no specific stub matched
             .RespondWith(WireMockResponse.Create()
                 .WithStatusCode(200)
