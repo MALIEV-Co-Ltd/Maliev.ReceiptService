@@ -1,5 +1,6 @@
 using Maliev.MessagingContracts;
 using Maliev.MessagingContracts.Contracts.Receipts;
+using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Application.Exceptions;
 using Maliev.ReceiptService.Application.Mappings;
 using Maliev.ReceiptService.Application.Metrics;
@@ -72,8 +73,10 @@ public class ReceiptService : IReceiptService
     public async Task<ReceiptResponse> CreateReceiptAsync(
         CreateReceiptRequest request,
         string staffId,
-        Guid correlationId)
+        Guid correlationId,
+        ReceiptAccessScope? accessScope = null)
     {
+        accessScope ??= ReceiptAccessScope.Unrestricted;
         var stopwatch = Stopwatch.StartNew();
 
         _logger.LogInformation(
@@ -86,6 +89,8 @@ public class ReceiptService : IReceiptService
         {
             throw new InvoiceNotFoundException(request.InvoiceId, $"Invoice {request.InvoiceId} not found");
         }
+
+        EnsureInvoiceAccess(invoice, accessScope);
 
         // Step 1a: For split invoices, validate segment and extract segment-specific data
         InvoiceSegmentDto? segment = null;
@@ -371,8 +376,10 @@ public class ReceiptService : IReceiptService
         int page = 1,
         int pageSize = 20,
         string sortBy = "issueDate",
-        string sortOrder = "desc")
+        string sortOrder = "desc",
+        ReceiptAccessScope? accessScope = null)
     {
+        accessScope ??= ReceiptAccessScope.Unrestricted;
         _logger.LogInformation(
             "Querying receipts: invoiceId={InvoiceId}, status={Status}, fromDate={FromDate}, toDate={ToDate}, segmentId={SegmentId}, page={Page}, pageSize={PageSize}",
             invoiceId, status, fromDate, toDate, segmentId, page, pageSize);
@@ -382,6 +389,8 @@ public class ReceiptService : IReceiptService
             .Include(r => r.LineItems)
             .AsNoTracking()
             .AsQueryable();
+
+        query = ApplyAccessScope(query, accessScope);
 
         if (invoiceId.HasValue)
         {
@@ -451,6 +460,36 @@ public class ReceiptService : IReceiptService
                 TotalPages = totalPages
             }
         };
+    }
+
+    private static void EnsureInvoiceAccess(InvoiceDto invoice, ReceiptAccessScope accessScope)
+    {
+        if (!accessScope.RestrictToCreatedReceipts)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(accessScope.PrincipalId) ||
+            string.IsNullOrWhiteSpace(invoice.CreatedBy) ||
+            !string.Equals(invoice.CreatedBy, accessScope.PrincipalId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException("Caller cannot create a receipt for this invoice");
+        }
+    }
+
+    private static IQueryable<Receipt> ApplyAccessScope(IQueryable<Receipt> query, ReceiptAccessScope accessScope)
+    {
+        if (!accessScope.RestrictToCreatedReceipts)
+        {
+            return query;
+        }
+
+        if (string.IsNullOrWhiteSpace(accessScope.PrincipalId))
+        {
+            return query.Where(_ => false);
+        }
+
+        return query.Where(r => r.CreatedBy == accessScope.PrincipalId);
     }
 
     /// <summary>

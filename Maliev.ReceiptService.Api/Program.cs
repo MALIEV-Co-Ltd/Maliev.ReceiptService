@@ -72,6 +72,7 @@ try
     builder.Services.AddControllers();
 
     // Application Services (implementations live in Infrastructure layer per Clean Architecture)
+    builder.Services.AddScoped<Maliev.ReceiptService.Api.Authorization.ReceiptAccessGuard>();
     builder.Services.AddScoped<ITaxValidator, ThailandTaxValidator>();
     builder.Services.AddScoped<IReceiptNumberGenerator, Maliev.ReceiptService.Infrastructure.Services.ReceiptNumberGenerator>();
     builder.Services.AddScoped<IReceiptService, Maliev.ReceiptService.Infrastructure.Services.ReceiptService>();

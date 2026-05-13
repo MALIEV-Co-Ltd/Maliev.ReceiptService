@@ -1,5 +1,6 @@
 using Maliev.ReceiptService.Application.Models.Requests;
 using Maliev.ReceiptService.Application.Models.Responses;
+using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Domain.Enums;
 
 namespace Maliev.ReceiptService.Application.Services;
@@ -15,11 +16,13 @@ public interface IReceiptService
     /// <param name="request">Receipt creation request</param>
     /// <param name="staffId">Staff member creating the receipt</param>
     /// <param name="correlationId">Correlation ID for distributed tracing</param>
+    /// <param name="accessScope">Optional caller-specific receipt visibility scope</param>
     /// <returns>Created receipt response</returns>
     Task<ReceiptResponse> CreateReceiptAsync(
         CreateReceiptRequest request,
         string staffId,
-        Guid correlationId);
+        Guid correlationId,
+        ReceiptAccessScope? accessScope = null);
 
     /// <summary>
     /// Retrieves a receipt by its ID
@@ -33,6 +36,17 @@ public interface IReceiptService
     /// Per contracts/receipts-api.yaml
     /// Extended for US4 to support segment filtering (T082)
     /// </summary>
+    /// <param name="invoiceId">Optional invoice ID filter</param>
+    /// <param name="status">Optional receipt status filter</param>
+    /// <param name="fromDate">Optional start date filter</param>
+    /// <param name="toDate">Optional end date filter</param>
+    /// <param name="segmentId">Optional invoice segment ID filter</param>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
+    /// <param name="sortBy">Sort field</param>
+    /// <param name="sortOrder">Sort order</param>
+    /// <param name="accessScope">Optional caller-specific receipt visibility scope</param>
+    /// <returns>Paged receipt response</returns>
     Task<PagedResponse<ReceiptResponse>> QueryReceiptsAsync(
         Guid? invoiceId = null,
         ReceiptStatus? status = null,
@@ -42,7 +56,8 @@ public interface IReceiptService
         int page = 1,
         int pageSize = 20,
         string sortBy = "issueDate",
-        string sortOrder = "desc");
+        string sortOrder = "desc",
+        ReceiptAccessScope? accessScope = null);
 
     /// <summary>
     /// Voids a receipt with balance restoration and audit trail

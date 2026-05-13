@@ -48,6 +48,7 @@ To maintain high performance and low complexity, the following are **NOT** used:
 - **Sequence Management Engine**: Distributed Redis-backed generator for gapless, zero-collision receipt number generation.
 - **Tax-Ready Auditing**: Dedicated endpoints for compliance review, void logging, and specialized tax authority reporting.
 - **Multi-Currency Support**: Native handling of various currencies with precise exchange rate tracking at the moment of issuance.
+- **Creator Ownership Scope**: `roles.receipt.creator` can create receipts only for invoices whose `InvoiceService` response `CreatedBy` matches the caller and can read/query only receipts it created.
 
 ---
 
@@ -99,6 +100,15 @@ All endpoints are prefixed with `/receipts/v1/`.
 | POST | `/receipts/{id}/void` | Void an existing receipt with mandatory reasoning |
 | GET | `/receipts/{id}/pdf` | Retrieve a professional rendered PDF document |
 | GET | `/receipts/audit-trail/{id}` | Access the complete modification history for a record |
+
+---
+
+## Authorization Model
+
+- All receipt endpoints use `[RequirePermission]` with `receipt.*` permission strings.
+- `roles.receipt.admin`, `roles.receipt.manager`, and `roles.receipt.auditor` are unrestricted for their granted actions.
+- `roles.receipt.creator` is object-scoped. Create validates `InvoiceDto.CreatedBy` from InvoiceService before issuing a receipt; read/query routes filter by local `Receipt.CreatedBy`.
+- ReceiptService depends on InvoiceService preserving `InvoiceResponse.CreatedBy` from the invoice creation audit entry. Do not remove that field or rename it without updating `InvoiceDto` and integration tests in this repo.
 
 ---
 

@@ -222,6 +222,8 @@ This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)*
 
 - **`TreatWarningsAsErrors = true`**: Zero warnings allowed. No suppression
 - **`[RequirePermission("domain.resources.action")]`**: On all endpoints, not plain `[Authorize]`
+- **Creator role scope**: `roles.receipt.creator` must remain scoped through `ReceiptAccessGuard` and `ReceiptAccessScope`. Create checks InvoiceService `CreatedBy`; read/query checks local `Receipt.CreatedBy`.
+- **Cross-boundary DTOs**: Before changing receipt creation, `InvoiceDto`, InvoiceService callers, controller payloads, or receipt/PDF MassTransit events, verify both sides of the JSON/message contract and add wire-shape tests where practical.
 - **API versioning**: All routes versioned (`v1/`)
 - **Service prefix**: Routes prefixed with service domain (e.g., `/receipt`)
 - **Scalar docs**: Configured at `/{service}/scalar`

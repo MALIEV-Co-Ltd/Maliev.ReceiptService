@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
+using Maliev.ReceiptService.Api.Authorization;
 using Maliev.ReceiptService.Application.Exceptions;
 using Maliev.ReceiptService.Application.Models.Requests;
 using Maliev.ReceiptService.Application.Authorization;
@@ -22,19 +23,30 @@ namespace Maliev.ReceiptService.Api.Controllers;
 public class ReceiptsController : ControllerBase
 {
     private readonly IReceiptService _receiptService;
+    private readonly ReceiptAccessGuard _accessGuard;
     private readonly ILogger<ReceiptsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReceiptsController"/> class.
     /// </summary>
     /// <param name="receiptService">The receipt service.</param>
+    /// <param name="accessGuard">Receipt object-scope access guard.</param>
     /// <param name="logger">The logger.</param>
     public ReceiptsController(
         IReceiptService receiptService,
+        ReceiptAccessGuard accessGuard,
         ILogger<ReceiptsController> logger)
     {
         _receiptService = receiptService;
+        _accessGuard = accessGuard;
         _logger = logger;
+    }
+
+    private string CurrentPrincipalId => _accessGuard.GetPrincipalId(User) ?? User.Identity?.Name ?? "system";
+
+    private async Task<ReceiptAccessDecision> CheckReceiptAccessAsync(Guid id)
+    {
+        return await _accessGuard.CheckReceiptAsync(id, User, HttpContext.RequestAborted);
     }
 
     /// <summary>
@@ -53,15 +65,15 @@ public class ReceiptsController : ControllerBase
         // Get correlation ID from middleware
         var correlationId = Guid.Parse(HttpContext.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString());
 
-        // Get staff ID from claims (mock for now - will come from JWT in production)
-        var staffId = User.Identity?.Name ?? "system";
+        var accessScope = _accessGuard.GetScope(User);
+        var staffId = CurrentPrincipalId;
 
         _logger.LogInformation("Creating receipt for invoice {InvoiceId}, correlation {CorrelationId}",
             request.InvoiceId, correlationId);
 
         try
         {
-            var receipt = await _receiptService.CreateReceiptAsync(request, staffId, correlationId);
+            var receipt = await _receiptService.CreateReceiptAsync(request, staffId, correlationId, accessScope);
             return CreatedAtAction(
                 nameof(GetReceiptById),
                 new { id = receipt.Id, version = "1.0" },
@@ -103,6 +115,11 @@ public class ReceiptsController : ControllerBase
                 message = ex.Message
             });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Receipt creation denied for invoice {InvoiceId}", request.InvoiceId);
+            return Forbid();
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Invoice Service unavailable for invoice {InvoiceId}", request.InvoiceId);
@@ -124,6 +141,18 @@ public class ReceiptsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetReceiptById(Guid id)
     {
+        var accessDecision = await CheckReceiptAccessAsync(id);
+        if (accessDecision == ReceiptAccessDecision.NotFound)
+        {
+            return NotFound(new
+            {
+                errorCode = "RECEIPT_NOT_FOUND",
+                message = $"Receipt {id} not found"
+            });
+        }
+
+        if (accessDecision == ReceiptAccessDecision.Forbidden) return Forbid();
+
         var receipt = await _receiptService.GetReceiptByIdAsync(id);
 
         if (receipt == null)
@@ -207,7 +236,7 @@ public class ReceiptsController : ControllerBase
             : toDate;
 
         var result = await _receiptService.QueryReceiptsAsync(
-            invoiceId, status, fromDateUtc, toDateUtc, segmentId, page, pageSize, sortBy, sortOrder);
+            invoiceId, status, fromDateUtc, toDateUtc, segmentId, page, pageSize, sortBy, sortOrder, _accessGuard.GetScope(User));
 
         return Ok(result);
     }
@@ -228,8 +257,7 @@ public class ReceiptsController : ControllerBase
         // Get correlation ID from middleware
         var correlationId = Guid.Parse(HttpContext.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString());
 
-        // Get staff ID from claims
-        var staffId = User.Identity?.Name ?? "system";
+        var staffId = CurrentPrincipalId;
 
         _logger.LogInformation(
             "Voiding receipt {ReceiptId}, reason: {Reason}, correlation {CorrelationId}",
@@ -237,6 +265,18 @@ public class ReceiptsController : ControllerBase
 
         try
         {
+            var accessDecision = await CheckReceiptAccessAsync(id);
+            if (accessDecision == ReceiptAccessDecision.NotFound)
+            {
+                return NotFound(new
+                {
+                    errorCode = "RECEIPT_NOT_FOUND",
+                    message = $"Receipt {id} not found"
+                });
+            }
+
+            if (accessDecision == ReceiptAccessDecision.Forbidden) return Forbid();
+
             var receipt = await _receiptService.VoidReceiptAsync(id, request.Reason, staffId, correlationId);
             return Ok(receipt);
         }
@@ -274,8 +314,7 @@ public class ReceiptsController : ControllerBase
         // Get correlation ID from middleware
         var correlationId = Guid.Parse(HttpContext.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString());
 
-        // Get staff ID from claims
-        var staffId = User.Identity?.Name ?? "system";
+        var staffId = CurrentPrincipalId;
 
         _logger.LogInformation(
             "Sending receipt {ReceiptId} to {Destination} via {Channel}, correlation {CorrelationId}",
@@ -283,6 +322,18 @@ public class ReceiptsController : ControllerBase
 
         try
         {
+            var accessDecision = await CheckReceiptAccessAsync(id);
+            if (accessDecision == ReceiptAccessDecision.NotFound)
+            {
+                return NotFound(new
+                {
+                    errorCode = "RECEIPT_NOT_FOUND",
+                    message = $"Receipt {id} not found"
+                });
+            }
+
+            if (accessDecision == ReceiptAccessDecision.Forbidden) return Forbid();
+
             var receipt = await _receiptService.SendReceiptAsync(
                 id, request.Destination, request.Channel, staffId, correlationId);
             return Ok(receipt);
@@ -322,6 +373,18 @@ public class ReceiptsController : ControllerBase
 
         try
         {
+            var accessDecision = await CheckReceiptAccessAsync(id);
+            if (accessDecision == ReceiptAccessDecision.NotFound)
+            {
+                return NotFound(new
+                {
+                    errorCode = "RECEIPT_NOT_FOUND",
+                    message = $"Receipt {id} not found"
+                });
+            }
+
+            if (accessDecision == ReceiptAccessDecision.Forbidden) return Forbid();
+
             var auditEvents = await _receiptService.GetAuditHistoryAsync(id);
             return Ok(auditEvents);
         }
