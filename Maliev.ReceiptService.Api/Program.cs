@@ -4,6 +4,7 @@ using Maliev.ReceiptService.Application.Authorization;
 using Maliev.ReceiptService.Application.Metrics;
 using Maliev.ReceiptService.Application.Ports;
 using Maliev.ReceiptService.Application.Services;
+using Maliev.ReceiptService.Infrastructure.Consumers;
 using Maliev.ReceiptService.Infrastructure.Data;
 using Maliev.ReceiptService.Infrastructure.ExternalServices;
 using MassTransit;
@@ -43,6 +44,7 @@ try
     {
         // Register PDF callback consumer
         configurator.AddConsumer<Maliev.ReceiptService.Api.Consumers.PdfGeneratedEventConsumer>();
+        configurator.AddConsumer<InvoicePaymentReceivedEventConsumer>();
 
         // Enable Entity Framework transactional outbox to eliminate dual-write risk
         // This ensures events are published atomically with database changes
