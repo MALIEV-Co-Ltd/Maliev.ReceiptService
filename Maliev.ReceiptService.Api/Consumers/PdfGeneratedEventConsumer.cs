@@ -127,9 +127,6 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
 
         _context.ReceiptAuditEvents.Add(auditEvent);
 
-        // Save changes
-        await _context.SaveChangesAsync();
-
         // Step 5: Publish ReceiptGeneratedEvent (outbox guarantees atomic delivery with SaveChanges)
         await _publishEndpoint.Publish(new ReceiptGeneratedEvent(
             MessageId: Guid.NewGuid(),
@@ -150,6 +147,8 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
                 GeneratedAt: DateTimeOffset.UtcNow
             )
         ));
+
+        await _context.SaveChangesAsync();
 
         _logger.LogInformation(
             "PDF callback processed and ReceiptGeneratedEvent published for receipt {ReceiptNumber}, status: {Status}, storage: {StorageUrl}",

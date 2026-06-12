@@ -220,31 +220,9 @@ public class ReceiptService : IReceiptService
             CorrelationId = correlationId
         };
 
-        // Step 9: Save to database with optimistic concurrency control
+        // Step 9: Stage database changes with optimistic concurrency control
         _context.Receipts.Add(receipt);
         _context.ReceiptAuditEvents.Add(auditEvent);
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            throw new DuplicateReceiptException(
-                request.InvoiceId,
-                "Invoice balance was modified by another operation. Please retry.");
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx && pgEx.SqlState == "23505")
-        {
-            // Unique constraint violation on InvoiceBalanceTracker - concurrent insert detected
-            throw new DuplicateReceiptException(
-                request.InvoiceId,
-                "Another receipt is being created for this invoice concurrently. Please retry.");
-        }
-
-        _logger.LogInformation(
-            "Receipt created: {ReceiptNumber} for invoice {InvoiceId}",
-            receiptNumber, request.InvoiceId);
 
         // Step 9.5: Publish ReceiptCreatedEvent (outbox guarantees atomic delivery with SaveChanges)
         await _publishEndpoint.Publish(new ReceiptCreatedEvent(
@@ -322,6 +300,28 @@ public class ReceiptService : IReceiptService
         );
 
         await _publishEndpoint.Publish(pdfEvent);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new DuplicateReceiptException(
+                request.InvoiceId,
+                "Invoice balance was modified by another operation. Please retry.");
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx && pgEx.SqlState == "23505")
+        {
+            // Unique constraint violation on InvoiceBalanceTracker - concurrent insert detected
+            throw new DuplicateReceiptException(
+                request.InvoiceId,
+                "Another receipt is being created for this invoice concurrently. Please retry.");
+        }
+
+        _logger.LogInformation(
+            "Receipt created: {ReceiptNumber} for invoice {InvoiceId}",
+            receiptNumber, request.InvoiceId);
 
         _logger.LogInformation(
             "PDF generation event published for receipt {ReceiptNumber}",

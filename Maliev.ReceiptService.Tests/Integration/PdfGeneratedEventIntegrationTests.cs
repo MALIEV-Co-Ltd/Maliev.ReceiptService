@@ -5,6 +5,7 @@ using Maliev.ReceiptService.Api.Consumers;
 using Maliev.ReceiptService.Domain.Entities;
 using Maliev.ReceiptService.Domain.Enums;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -75,6 +76,79 @@ public class PdfGeneratedEventIntegrationTests : BaseReceiptIntegrationTest
         Assert.NotNull(updatedReceipt.PdfReferenceId);
 
         publishEndpointMock.Verify(p => p.Publish(It.IsAny<ReceiptGeneratedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PdfGeneratedEventConsumer_WhenPublishFails_DoesNotPersistReceiptUpdate()
+    {
+        // Arrange
+        var receiptId = Guid.NewGuid();
+        using (var setupScope = Factory.Services.CreateScope())
+        {
+            var setupContext = setupScope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
+            setupContext.Receipts.Add(new Receipt
+            {
+                Id = receiptId,
+                ReceiptNumber = "TEST-PDF-FAIL-001",
+                Status = ReceiptStatus.PendingPdf,
+                IssueDate = DateTime.UtcNow,
+                TotalAmount = 1000m,
+                CustomerName = "Test Customer",
+                Currency = "THB"
+            });
+            await setupContext.SaveChangesAsync();
+        }
+
+        using var scope = Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
+        var publishEndpointMock = new Mock<IPublishEndpoint>();
+        publishEndpointMock
+            .Setup(p => p.Publish(It.IsAny<ReceiptGeneratedEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("publish failed"));
+        var loggerMock = new Mock<ILogger<PdfGeneratedEventConsumer>>();
+        var consumer = new PdfGeneratedEventConsumer(context, publishEndpointMock.Object, loggerMock.Object);
+
+        var message = new PdfGenerationCompletedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "PdfGenerationCompletedEvent",
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "PdfService",
+            ConsumedBy: new[] { "ReceiptService" },
+            CorrelationId: Guid.NewGuid(),
+            CausationId: Guid.NewGuid(),
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new PdfGenerationCompletedEventPayload(
+                RequestId: Guid.NewGuid().ToString(),
+                ReferenceId: receiptId.ToString(),
+                DocumentType: "Receipt",
+                StorageUrl: "http://storage/receipt.pdf",
+                CompletedAt: DateTimeOffset.UtcNow
+            )
+        );
+
+        var consumeContextMock = new Mock<ConsumeContext<PdfGenerationCompletedEvent>>();
+        consumeContextMock.Setup(c => c.Message).Returns(message);
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => consumer.Consume(consumeContextMock.Object));
+
+        // Assert
+        using var assertScope = Factory.Services.CreateScope();
+        var assertContext = assertScope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
+        var unchangedReceipt = await assertContext.Receipts
+            .AsNoTracking()
+            .SingleAsync(r => r.Id == receiptId);
+        var auditEvents = await assertContext.ReceiptAuditEvents
+            .AsNoTracking()
+            .Where(e => e.ReceiptId == receiptId)
+            .ToListAsync();
+
+        Assert.Equal(ReceiptStatus.PendingPdf, unchangedReceipt.Status);
+        Assert.Null(unchangedReceipt.PdfReferenceId);
+        Assert.Empty(auditEvents);
     }
 
     [Fact]
