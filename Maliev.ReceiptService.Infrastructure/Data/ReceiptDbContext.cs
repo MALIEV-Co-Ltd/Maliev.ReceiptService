@@ -31,6 +31,9 @@ public class ReceiptDbContext : DbContext
                 .IsUnique();
 
             entity.HasIndex(e => e.InvoiceId);
+            entity.HasIndex(e => new { e.InvoiceId, e.ExternalPaymentId })
+                .IsUnique()
+                .HasFilter("external_payment_id IS NOT NULL AND status <> 'Void'");
             entity.HasIndex(e => e.IssueDate);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);

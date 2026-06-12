@@ -15,6 +15,11 @@ public class CreateReceiptRequest
     public Guid InvoiceId { get; set; }
 
     /// <summary>
+    /// Optional external payment identifier used to deduplicate payment-driven receipt creation.
+    /// </summary>
+    public Guid? ExternalPaymentId { get; set; }
+
+    /// <summary>
     /// Receipt amount (can be partial or full invoice amount)
     /// </summary>
     [Required]

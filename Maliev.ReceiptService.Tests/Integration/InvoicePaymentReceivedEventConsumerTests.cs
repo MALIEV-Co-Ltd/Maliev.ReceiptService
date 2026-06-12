@@ -59,6 +59,11 @@ public class InvoicePaymentReceivedEventConsumerTests : BaseReceiptIntegrationTe
             // Act
             await harness.Bus.Publish(paymentEvent);
             await harness.Bus.Publish(paymentEvent);
+            await harness.Bus.Publish(paymentEvent with
+            {
+                MessageId = Guid.NewGuid(),
+                CorrelationId = Guid.NewGuid()
+            });
 
             // Assert
             Assert.True(await harness.Consumed.Any<InvoicePaymentReceivedEvent>());
@@ -73,6 +78,7 @@ public class InvoicePaymentReceivedEventConsumerTests : BaseReceiptIntegrationTe
 
             var receipt = Assert.Single(receipts);
             Assert.Equal(correlationId, receipt.CorrelationId);
+            Assert.Equal(paymentId, receipt.ExternalPaymentId);
             Assert.Equal(2140.00m, receipt.TotalAmount);
             Assert.Equal("PaymentService", receipt.PaymentMethod);
 

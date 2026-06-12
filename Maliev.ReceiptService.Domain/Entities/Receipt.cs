@@ -15,6 +15,8 @@ public class Receipt
     [Required]
     public Guid InvoiceId { get; init; }
 
+    public Guid? ExternalPaymentId { get; init; }
+
     public Guid? InvoiceSegmentId { get; init; }
 
     [Required]

@@ -176,6 +176,7 @@ public class ReceiptService : IReceiptService
             Id = Guid.NewGuid(),
             ReceiptNumber = receiptNumber,
             InvoiceId = request.InvoiceId,
+            ExternalPaymentId = request.ExternalPaymentId,
             InvoiceSegmentId = request.InvoiceSegmentId,
             IssueDate = DateTime.UtcNow,
             CustomerName = invoice.CustomerName,

@@ -57,7 +57,7 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
             .AnyAsync(
                 receipt =>
                     receipt.InvoiceId == payload.InvoiceId &&
-                    receipt.CorrelationId == correlationId &&
+                    (receipt.ExternalPaymentId == payload.PaymentId || receipt.CorrelationId == correlationId) &&
                     receipt.Status != ReceiptStatus.Void,
                 context.CancellationToken);
 
@@ -75,6 +75,7 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
             new CreateReceiptRequest
             {
                 InvoiceId = payload.InvoiceId,
+                ExternalPaymentId = payload.PaymentId,
                 Amount = (decimal)payload.AllocatedAmount,
                 PaymentMethod = "PaymentService"
             },
