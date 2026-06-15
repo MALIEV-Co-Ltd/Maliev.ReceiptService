@@ -1,4 +1,5 @@
 using Maliev.MessagingContracts.Contracts.Invoices;
+using Maliev.ReceiptService.Application.Exceptions;
 using Maliev.ReceiptService.Application.Models.Requests;
 using Maliev.ReceiptService.Application.Services;
 using Maliev.ReceiptService.Domain.Enums;
@@ -71,16 +72,32 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
             return;
         }
 
-        await _receiptService.CreateReceiptAsync(
-            new CreateReceiptRequest
+        try
+        {
+            await _receiptService.CreateReceiptAsync(
+                new CreateReceiptRequest
+                {
+                    InvoiceId = payload.InvoiceId,
+                    ExternalPaymentId = payload.PaymentId,
+                    Amount = (decimal)payload.AllocatedAmount,
+                    PaymentMethod = "PaymentService"
+                },
+                SystemStaffId,
+                correlationId);
+        }
+        catch (Exception ex) when (ex is DuplicateReceiptException or OverReceiptingException)
+        {
+            if (await WaitForReceiptForPaymentAsync(payload.InvoiceId, payload.PaymentId, context.CancellationToken))
             {
-                InvoiceId = payload.InvoiceId,
-                ExternalPaymentId = payload.PaymentId,
-                Amount = (decimal)payload.AllocatedAmount,
-                PaymentMethod = "PaymentService"
-            },
-            SystemStaffId,
-            correlationId);
+                _logger.LogInformation(
+                    "Receipt was created concurrently for invoice payment allocation. InvoiceId={InvoiceId}, PaymentId={PaymentId}",
+                    payload.InvoiceId,
+                    payload.PaymentId);
+                return;
+            }
+
+            throw;
+        }
 
         _logger.LogInformation(
             "Created receipt for invoice payment allocation. InvoiceId={InvoiceId}, PaymentId={PaymentId}, Amount={Amount} {Currency}",
@@ -88,5 +105,37 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
             payload.PaymentId,
             payload.AllocatedAmount,
             payload.Currency);
+    }
+
+    private async Task<bool> WaitForReceiptForPaymentAsync(
+        Guid invoiceId,
+        Guid paymentId,
+        CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 5;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var receiptExists = await _context.Receipts
+                .AsNoTracking()
+                .AnyAsync(
+                    receipt =>
+                        receipt.InvoiceId == invoiceId &&
+                        receipt.ExternalPaymentId == paymentId &&
+                        receipt.Status != ReceiptStatus.Void,
+                    cancellationToken);
+
+            if (receiptExists)
+            {
+                return true;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+            }
+        }
+
+        return false;
     }
 }

@@ -87,11 +87,23 @@ public class PdfGeneratedEventConsumer : IConsumer<PdfGenerationCompletedEvent>
             return; // Idempotent - receipt might have been deleted
         }
 
+        var hasPdfRequestId = Guid.TryParse(payload.RequestId, out var pdfRequestId);
+        if (receipt.Status == ReceiptStatus.Active &&
+            receipt.PdfReferenceId.HasValue &&
+            receipt.PdfReferenceId.Value == pdfRequestId)
+        {
+            _logger.LogInformation(
+                "PDF generation completion already processed for receipt {ReceiptNumber}, RequestId={RequestId}",
+                receipt.ReceiptNumber,
+                payload.RequestId);
+            return;
+        }
+
         // Step 2 & 3: Update PdfReferenceId and change status
         var previousStatus = receipt.Status;
 
         // Store the PDF generation requestId as the reference
-        if (Guid.TryParse(payload.RequestId, out var pdfRequestId))
+        if (hasPdfRequestId)
         {
             receipt.PdfReferenceId = pdfRequestId;
         }

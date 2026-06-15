@@ -44,7 +44,10 @@ try
     {
         // Register PDF callback consumer
         configurator.AddConsumer<Maliev.ReceiptService.Api.Consumers.PdfGeneratedEventConsumer>();
-        configurator.AddConsumer<InvoicePaymentReceivedEventConsumer>();
+        configurator.AddConsumer<InvoicePaymentReceivedEventConsumer>(consumerConfigurator =>
+        {
+            consumerConfigurator.ConcurrentMessageLimit = 1;
+        });
 
         // Enable Entity Framework transactional outbox to eliminate dual-write risk
         // This ensures events are published atomically with database changes

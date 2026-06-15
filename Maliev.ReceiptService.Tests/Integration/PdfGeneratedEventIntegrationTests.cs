@@ -152,6 +152,80 @@ public class PdfGeneratedEventIntegrationTests : BaseReceiptIntegrationTest
     }
 
     [Fact]
+    public async Task PdfGeneratedEventConsumer_DuplicateCompletion_DoesNotRepublishOrDuplicateAudit()
+    {
+        // Arrange
+        using var scope = Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Maliev.ReceiptService.Infrastructure.Data.ReceiptDbContext>();
+        var pdfRequestId = Guid.NewGuid();
+
+        var receipt = new Receipt
+        {
+            Id = Guid.NewGuid(),
+            ReceiptNumber = "TEST-PDF-DUP-001",
+            Status = ReceiptStatus.Active,
+            PdfReferenceId = pdfRequestId,
+            IssueDate = DateTime.UtcNow,
+            TotalAmount = 1000m,
+            CustomerName = "Test Customer",
+            Currency = "THB"
+        };
+        context.Receipts.Add(receipt);
+        context.ReceiptAuditEvents.Add(new ReceiptAuditEvent
+        {
+            Id = Guid.NewGuid(),
+            ReceiptId = receipt.Id,
+            EventType = AuditEventType.PdfGenerated,
+            Timestamp = DateTime.UtcNow,
+            StaffMemberId = "system",
+            Reason = "PDF generated successfully",
+            PreviousState = "{}",
+            NewState = "{}",
+            CorrelationId = Guid.NewGuid(),
+            RetainUntil = DateTime.UtcNow.AddYears(7)
+        });
+        await context.SaveChangesAsync();
+
+        var publishEndpointMock = new Mock<IPublishEndpoint>();
+        var loggerMock = new Mock<ILogger<PdfGeneratedEventConsumer>>();
+        var consumer = new PdfGeneratedEventConsumer(context, publishEndpointMock.Object, loggerMock.Object);
+
+        var message = new PdfGenerationCompletedEvent(
+            MessageId: Guid.NewGuid(),
+            MessageName: "PdfGenerationCompletedEvent",
+            MessageType: Maliev.MessagingContracts.Contracts.Shared.MessageType.Event,
+            MessageVersion: "1.0.0",
+            PublishedBy: "PdfService",
+            ConsumedBy: new[] { "ReceiptService" },
+            CorrelationId: Guid.NewGuid(),
+            CausationId: Guid.NewGuid(),
+            OccurredAtUtc: DateTimeOffset.UtcNow,
+            IsPublic: false,
+            Payload: new PdfGenerationCompletedEventPayload(
+                RequestId: pdfRequestId.ToString(),
+                ReferenceId: receipt.Id.ToString(),
+                DocumentType: "Receipt",
+                StorageUrl: "http://storage/receipt.pdf",
+                CompletedAt: DateTimeOffset.UtcNow
+            )
+        );
+
+        var consumeContextMock = new Mock<ConsumeContext<PdfGenerationCompletedEvent>>();
+        consumeContextMock.Setup(c => c.Message).Returns(message);
+
+        // Act
+        await consumer.Consume(consumeContextMock.Object);
+
+        // Assert
+        var auditCount = await context.ReceiptAuditEvents
+            .AsNoTracking()
+            .CountAsync(e => e.ReceiptId == receipt.Id && e.EventType == AuditEventType.PdfGenerated);
+
+        Assert.Equal(1, auditCount);
+        publishEndpointMock.Verify(p => p.Publish(It.IsAny<ReceiptGeneratedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task PdfGeneratedEventConsumer_NonReceiptDocument_DoesNotUpdateReceipt()
     {
         // Arrange
