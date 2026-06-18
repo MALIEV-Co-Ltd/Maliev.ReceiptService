@@ -35,6 +35,7 @@ public class InvoicePaymentReceivedEventConsumerTests : BaseReceiptIntegrationTe
         var correlationId = Guid.NewGuid();
         var harness = Factory.Services.GetRequiredService<ITestHarness>();
         StubInvoice(invoiceId);
+        StubPayment(paymentId);
 
         await harness.Start();
 
@@ -75,10 +76,11 @@ public class InvoicePaymentReceivedEventConsumerTests : BaseReceiptIntegrationTe
             Assert.Equal(correlationId, receipt.CorrelationId);
             Assert.Equal(paymentId, receipt.ExternalPaymentId);
             Assert.Equal(2140.00m, receipt.TotalAmount);
-            Assert.Equal("PaymentService", receipt.PaymentMethod);
+            Assert.Equal("omise", receipt.PaymentMethod);
 
             var pdfRequested = await WaitForAsync(() => harness.Published.Any<ReceiptPdfRequestedEvent>(published =>
                 published.Context.Message.Payload.ReceiptId == receipt.Id &&
+                published.Context.Message.Payload.FinancialDetails.PaymentMethod == "omise" &&
                 published.Context.Message.CorrelationId == correlationId));
             Assert.True(pdfRequested);
             Assert.False(await harness.Published.Any<Fault<InvoicePaymentReceivedEvent>>());
@@ -187,6 +189,27 @@ public class InvoicePaymentReceivedEventConsumerTests : BaseReceiptIntegrationTe
                             lineTotal = 2140.00m
                         }
                     }
+                })));
+    }
+
+    private void StubPayment(Guid paymentId)
+    {
+        Factory.InvoiceServiceMock
+            .Given(Request.Create().WithPath($"/invoice/v1/payments/{paymentId}").UsingGet())
+            .AtPriority(1)
+            .RespondWith(WireMockResponse.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new
+                {
+                    id = paymentId,
+                    paymentAmount = 2140.00m,
+                    paymentDate = DateTime.UtcNow,
+                    paymentMethod = "omise",
+                    referenceNumber = "ORD-PAID-001",
+                    notes = "Paid through Omise test mode",
+                    recordedBy = "PaymentService",
+                    createdAt = DateTime.UtcNow
                 })));
     }
 }

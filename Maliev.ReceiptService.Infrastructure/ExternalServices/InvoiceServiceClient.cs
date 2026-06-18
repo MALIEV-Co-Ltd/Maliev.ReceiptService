@@ -65,6 +65,42 @@ public class InvoiceServiceClient : IInvoiceServiceClient
         }
     }
 
+    /// <summary>
+    /// Retrieves a payment by its ID.
+    /// </summary>
+    /// <param name="paymentId">The payment ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The payment DTO if found; otherwise, null.</returns>
+    public async Task<InvoicePaymentDto?> GetPaymentAsync(Guid paymentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching payment {PaymentId} from Invoice Service", paymentId);
+
+            var response = await _httpClient.GetAsync($"/invoice/v1/payments/{paymentId}", cancellationToken);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Payment {PaymentId} not found", paymentId);
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var payment = JsonSerializer.Deserialize<InvoiceServicePaymentResponse>(jsonContent, JsonOptions)?.ToInvoicePaymentDto();
+
+            _logger.LogInformation("Successfully fetched payment {PaymentId}", paymentId);
+
+            return payment;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching payment {PaymentId} from Invoice Service", paymentId);
+            throw;
+        }
+    }
+
     private sealed class InvoiceServiceInvoiceResponse
     {
         public Guid Id { get; set; }
@@ -190,6 +226,31 @@ public class InvoiceServiceClient : IInvoiceServiceClient
                 UnitPrice = UnitPrice,
                 TaxRate = TaxRate,
                 LineTotal = LineTotal
+            };
+        }
+    }
+
+    private sealed class InvoiceServicePaymentResponse
+    {
+        public Guid Id { get; set; }
+
+        public decimal PaymentAmount { get; set; }
+
+        public DateTime PaymentDate { get; set; }
+
+        public string PaymentMethod { get; set; } = string.Empty;
+
+        public string? ReferenceNumber { get; set; }
+
+        public InvoicePaymentDto ToInvoicePaymentDto()
+        {
+            return new InvoicePaymentDto
+            {
+                Id = Id,
+                PaymentAmount = PaymentAmount,
+                PaymentDate = PaymentDate,
+                PaymentMethod = PaymentMethod,
+                ReferenceNumber = ReferenceNumber
             };
         }
     }

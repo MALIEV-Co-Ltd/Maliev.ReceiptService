@@ -1,6 +1,8 @@
 using Maliev.MessagingContracts.Contracts.Invoices;
 using Maliev.ReceiptService.Application.Exceptions;
+using Maliev.ReceiptService.Application.Models.Dtos;
 using Maliev.ReceiptService.Application.Models.Requests;
+using Maliev.ReceiptService.Application.Ports;
 using Maliev.ReceiptService.Application.Services;
 using Maliev.ReceiptService.Domain.Enums;
 using Maliev.ReceiptService.Infrastructure.Data;
@@ -19,6 +21,7 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
 
     private readonly ReceiptDbContext _context;
     private readonly IReceiptService _receiptService;
+    private readonly IInvoiceServiceClient _invoiceClient;
     private readonly ILogger<InvoicePaymentReceivedEventConsumer> _logger;
 
     /// <summary>
@@ -27,10 +30,12 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
     public InvoicePaymentReceivedEventConsumer(
         ReceiptDbContext context,
         IReceiptService receiptService,
+        IInvoiceServiceClient invoiceClient,
         ILogger<InvoicePaymentReceivedEventConsumer> logger)
     {
         _context = context;
         _receiptService = receiptService;
+        _invoiceClient = invoiceClient;
         _logger = logger;
     }
 
@@ -74,13 +79,17 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
 
         try
         {
+            var payment = await ResolvePaymentAsync(payload.PaymentId, context.CancellationToken);
+
             await _receiptService.CreateReceiptAsync(
                 new CreateReceiptRequest
                 {
                     InvoiceId = payload.InvoiceId,
                     ExternalPaymentId = payload.PaymentId,
                     Amount = (decimal)payload.AllocatedAmount,
-                    PaymentMethod = "PaymentService"
+                    PaymentMethod = string.IsNullOrWhiteSpace(payment?.PaymentMethod)
+                        ? "PaymentService"
+                        : payment.PaymentMethod
                 },
                 SystemStaffId,
                 correlationId);
@@ -105,6 +114,24 @@ public class InvoicePaymentReceivedEventConsumer : IConsumer<InvoicePaymentRecei
             payload.PaymentId,
             payload.AllocatedAmount,
             payload.Currency);
+    }
+
+    private async Task<InvoicePaymentDto?> ResolvePaymentAsync(
+        Guid paymentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _invoiceClient.GetPaymentAsync(paymentId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Payment method lookup failed for invoice payment allocation {PaymentId}; falling back to PaymentService",
+                paymentId);
+            return null;
+        }
     }
 
     private async Task<bool> WaitForReceiptForPaymentAsync(

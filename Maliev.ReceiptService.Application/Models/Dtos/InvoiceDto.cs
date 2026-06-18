@@ -207,3 +207,34 @@ public class InvoiceSegmentDto
     /// </summary>
     public List<Guid> LineItemIds { get; set; } = new();
 }
+
+/// <summary>
+/// Data Transfer Object for an invoice payment.
+/// </summary>
+public class InvoicePaymentDto
+{
+    /// <summary>
+    /// Gets or sets the payment ID.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total payment amount.
+    /// </summary>
+    public decimal PaymentAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date when payment was received.
+    /// </summary>
+    public DateTime PaymentDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-neutral payment method.
+    /// </summary>
+    public string PaymentMethod { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional payment reference number.
+    /// </summary>
+    public string? ReferenceNumber { get; set; }
+}

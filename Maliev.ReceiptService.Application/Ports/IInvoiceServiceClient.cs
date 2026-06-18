@@ -14,4 +14,12 @@ public interface IInvoiceServiceClient
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The invoice DTO if found; otherwise, null.</returns>
     Task<InvoiceDto?> GetInvoiceAsync(Guid invoiceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves a payment by its ID.
+    /// </summary>
+    /// <param name="paymentId">The payment ID.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The payment DTO if found; otherwise, null.</returns>
+    Task<InvoicePaymentDto?> GetPaymentAsync(Guid paymentId, CancellationToken cancellationToken = default);
 }
