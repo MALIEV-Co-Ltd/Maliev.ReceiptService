@@ -44,9 +44,11 @@ public class CreateReceiptContractTests : IAsyncLifetime
     {
         // Arrange
         var testInvoiceId = Guid.NewGuid().ToString();
+        var externalPaymentId = Guid.NewGuid().ToString();
         var request = new
         {
             invoiceId = testInvoiceId,
+            externalPaymentId,
             amount = 1070.00m,
             paymentMethod = "Bank Transfer"
         };
@@ -71,6 +73,9 @@ public class CreateReceiptContractTests : IAsyncLifetime
 
         Assert.True(root.TryGetProperty("invoiceId", out var invoiceId));
         Assert.Equal(testInvoiceId, invoiceId.GetString());
+
+        Assert.True(root.TryGetProperty("externalPaymentId", out var paymentId));
+        Assert.Equal(externalPaymentId, paymentId.GetString());
 
         Assert.True(root.TryGetProperty("issueDate", out var issueDate));
         Assert.True(DateTime.TryParse(issueDate.GetString(), out _));

@@ -19,6 +19,7 @@ public static class ReceiptMappingExtensions
             Id = receipt.Id,
             ReceiptNumber = receipt.ReceiptNumber,
             InvoiceId = receipt.InvoiceId,
+            ExternalPaymentId = receipt.ExternalPaymentId,
             InvoiceSegmentId = receipt.InvoiceSegmentId,
             IssueDate = receipt.IssueDate,
             CustomerName = receipt.CustomerName,

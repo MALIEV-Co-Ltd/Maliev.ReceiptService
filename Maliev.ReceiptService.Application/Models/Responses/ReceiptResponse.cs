@@ -21,6 +21,11 @@ public class ReceiptResponse
     public Guid InvoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional external payment ID that created this receipt.
+    /// </summary>
+    public Guid? ExternalPaymentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional invoice segment ID.
     /// </summary>
     public Guid? InvoiceSegmentId { get; set; }
