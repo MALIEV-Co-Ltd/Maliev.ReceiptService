@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- Match the rest of the fleet: every other project (incl. sibling test projects) enforces
+         warnings-as-errors, so NuGetAudit advisories fail the build instead of scrolling past. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +22,11 @@
     <PackageReference Include="Testcontainers.RabbitMq" Version="4.10.0" />
     <PackageReference Include="Testcontainers.Redis" Version="4.10.0" />
     <PackageReference Include="WireMock.Net" Version="1.19.0" />
+    <!-- Transitive pin: WireMock.Net pulls Scriban.Signed 5.5.0, which carries 13 known advisories
+         (incl. critical GHSA-5wr9-m6jw-xx44). Pin the patched 7.2.5 so the vulnerable template
+         engine is removed from the graph. WireMock loads Scriban only for response templating,
+         which these HTTP-stub tests do not use. -->
+    <PackageReference Include="Scriban.Signed" Version="7.2.5" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
