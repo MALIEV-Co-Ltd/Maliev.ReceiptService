@@ -1,0 +1,38 @@
+## Specs and documentation
+specs/
+*.md
+!README.md
+
+## Tests
+tests/
+**/*Tests/
+**/TestResults/
+
+## IDE and development files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## Build artifacts
+bin/
+obj/
+artifacts/
+out/
+
+## Git
+.git/
+.gitignore
+.gitattributes
+
+## CI/CD
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+## Development tools
+.editorconfig
+.specify/
+.claude/
+.gemini/

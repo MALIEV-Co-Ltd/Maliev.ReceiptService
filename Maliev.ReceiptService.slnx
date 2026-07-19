@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Maliev.ReceiptService.Domain/Maliev.ReceiptService.Domain.csproj" />
+  <Project Path="Maliev.ReceiptService.Application/Maliev.ReceiptService.Application.csproj" />
+  <Project Path="Maliev.ReceiptService.Infrastructure/Maliev.ReceiptService.Infrastructure.csproj" />
+  <Project Path="Maliev.ReceiptService.Api/Maliev.ReceiptService.Api.csproj" />
+  <Project Path="Maliev.ReceiptService.Tests/Maliev.ReceiptService.Tests.csproj" />
+</Solution>
