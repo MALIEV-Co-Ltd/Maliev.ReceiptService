@@ -1,0 +1,556 @@
+openapi: 3.0.3
+info:
+  title: MALIEV Receipt Service API
+  description: |
+    Receipt Service manages customer-facing receipts for paid invoices within the MALIEV microservice ecosystem.
+
+    **Key Features**:
+    - Generate receipts from existing invoices (full or partial payment)
+    - Void receipts with audit trail
+    - Query receipt status and history
+    - Immutable receipts after creation (corrections via void+recreate only)
+    - Sequential receipt numbering per legal entity
+    - 7-year audit trail retention
+
+    **Base URL**: `https://api.maliev.com/receipt/v1`
+
+    **Authentication**: Bearer JWT token required in `Authorization` header
+  version: 1.0.0
+  contact:
+    name: MALIEV Engineering
+    url: https://maliev.com
+
+servers:
+  - url: https://api.maliev.com/receipt/v1
+    description: Production
+  - url: https://staging-api.maliev.com/receipt/v1
+    description: Staging
+  - url: http://localhost:8080/receipt/v1
+    description: Local Development
+
+tags:
+  - name: Receipts
+    description: Receipt creation, retrieval, and void operations
+  - name: Analytics
+    description: Business metrics and payment analytics
+
+paths:
+  /receipts:
+    post:
+      tags:
+        - Receipts
+      summary: Create a new receipt
+      description: |
+        Generates a receipt for a paid or partially paid invoice.
+
+        **Behavior**:
+        - Retrieves invoice details from Invoice Service
+        - Validates tax compliance and eligibility
+        - Prevents duplicate/over-receipting via balance tracking
+        - Generates sequential receipt number
+        - Publishes PDF generation event to RabbitMQ
+        - Creates immutable receipt record
+
+        **Performance**: Target <5 seconds (SC-001)
+      operationId: createReceipt
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReceiptRequest'
+            examples:
+              fullPayment:
+                summary: Full invoice payment
+                value:
+                  invoiceId: "550e8400-e29b-41d4-a716-446655440000"
+                  amount: 1070.00
+                  paymentMethod: "Bank Transfer"
+              partialPayment:
+                summary: Partial invoice payment
+                value:
+                  invoiceId: "550e8400-e29b-41d4-a716-446655440000"
+                  amount: 500.00
+                  paymentMethod: "Cash"
+      responses:
+        '201':
+          description: Receipt created successfully
+          headers:
+            X-Correlation-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Distributed tracing correlation ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptResponse'
+              example:
+                id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                receiptNumber: "MALIEV-2025-000042"
+                invoiceId: "550e8400-e29b-41d4-a716-446655440000"
+                issueDate: "2025-12-05T14:30:00Z"
+                customerName: "Acme Corp"
+                customerTaxId: "1234567890123"
+                subtotal: 1000.00
+                taxAmount: 70.00
+                totalAmount: 1070.00
+                currency: "THB"
+                paymentMethod: "Bank Transfer"
+                status: "PendingPdf"
+                createdBy: "staff-12345"
+                lineItems:
+                  - lineNumber: 1
+                    description: "Professional Services - Dec 2025"
+                    quantity: 10
+                    unitPrice: 100.00
+                    taxRate: 7.00
+                    lineTotal: 1070.00
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidAmount:
+                  value:
+                    errorCode: "INVALID_AMOUNT"
+                    message: "Amount must be greater than zero"
+                taxValidationFailed:
+                  value:
+                    errorCode: "TAX_VALIDATION_FAILED"
+                    message: "Tax ID (เลขประจำตัวผู้เสียภาษี) is required"
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: "INVOICE_NOT_FOUND"
+                message: "Invoice 550e8400-e29b-41d4-a716-446655440000 not found"
+        '409':
+          description: Duplicate receipt or balance conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateReceipt:
+                  value:
+                    errorCode: "DUPLICATE_RECEIPT"
+                    message: "Invoice 550e8400-e29b-41d4-a716-446655440000 is already fully receipted"
+                insufficientBalance:
+                  value:
+                    errorCode: "INSUFFICIENT_BALANCE"
+                    message: "Receipt amount 700.00 exceeds remaining balance 500.00"
+                concurrencyConflict:
+                  value:
+                    errorCode: "CONCURRENCY_CONFLICT"
+                    message: "Invoice balance was modified by another operation. Please retry."
+        '503':
+          description: Invoice Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: "INVOICE_SERVICE_UNAVAILABLE"
+                message: "Unable to retrieve invoice details after 2 retries"
+
+    get:
+      tags:
+        - Receipts
+      summary: Query receipts
+      description: |
+        Retrieves receipts with filtering, sorting, and pagination.
+
+        **Performance**: Target <2 seconds for 100k records (SC-007)
+      operationId: queryReceipts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invoiceId
+          in: query
+          description: Filter by invoice ID
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by receipt status
+          schema:
+            type: string
+            enum: [Active, Void, PendingPdf]
+        - name: fromDate
+          in: query
+          description: Filter receipts issued on or after this date
+          schema:
+            type: string
+            format: date-time
+        - name: toDate
+          in: query
+          description: Filter receipts issued on or before this date
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [issueDate, receiptNumber, totalAmount]
+            default: issueDate
+        - name: sortOrder
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Receipts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReceiptResponse'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receipts/{id}:
+    get:
+      tags:
+        - Receipts
+      summary: Get receipt by ID
+      description: Retrieves a single receipt with full details and audit history
+      operationId: getReceiptById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Receipt UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receipt found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptResponse'
+        '404':
+          description: Receipt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receipts/{id}/void:
+    post:
+      tags:
+        - Receipts
+      summary: Void a receipt
+      description: |
+        Voids an existing receipt with a mandatory reason. Creates audit trail entry and restores invoice balance.
+
+        **Behavior**:
+        - Changes receipt status to Void
+        - Records void reason, staff member, and timestamp
+        - Creates audit event
+        - Restores invoice receiptable balance
+        - Voiding is irreversible
+
+        **Performance**: Target <3 seconds (SC-006)
+      operationId: voidReceipt
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Receipt UUID to void
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidReceiptRequest'
+            example:
+              reason: "Payment reversed by customer"
+      responses:
+        '200':
+          description: Receipt voided successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptResponse'
+        '404':
+          description: Receipt not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Receipt already voided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: "ALREADY_VOIDED"
+                message: "Receipt MALIEV-2025-000042 is already voided"
+
+  /receipts/{id}/audit-history:
+    get:
+      tags:
+        - Receipts
+      summary: Get receipt audit history
+      description: Retrieves complete audit trail for a receipt (creation, voids, PDF generation)
+      operationId: getReceiptAuditHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Receipt UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receiptId:
+                    type: string
+                    format: uuid
+                  receiptNumber:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateReceiptRequest:
+      type: object
+      required:
+        - invoiceId
+        - amount
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+          description: Invoice ID from Invoice Service
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Receipt amount (can be partial or full invoice amount)
+        paymentMethod:
+          type: string
+          maxLength: 50
+          description: Payment method (e.g., Cash, Bank Transfer, Credit Card)
+          example: "Bank Transfer"
+
+    VoidReceiptRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Mandatory reason for voiding the receipt
+          example: "Payment reversed by customer"
+
+    ReceiptResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        receiptNumber:
+          type: string
+          pattern: '^[A-Z]+-\d{4}-\d{6}$'
+          example: "MALIEV-2025-000042"
+        invoiceId:
+          type: string
+          format: uuid
+        issueDate:
+          type: string
+          format: date-time
+        customerName:
+          type: string
+        customerTaxId:
+          type: string
+          nullable: true
+        customerAddress:
+          type: string
+          nullable: true
+        subtotal:
+          type: number
+          format: decimal
+        taxAmount:
+          type: number
+          format: decimal
+        withholdingTaxAmount:
+          type: number
+          format: decimal
+          nullable: true
+        totalAmount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          example: "THB"
+        paymentMethod:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Active, Void, PendingPdf]
+        pdfReferenceId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        voidedAt:
+          type: string
+          format: date-time
+          nullable: true
+        voidedBy:
+          type: string
+          nullable: true
+        voidReason:
+          type: string
+          nullable: true
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptLineItem'
+
+    ReceiptLineItem:
+      type: object
+      properties:
+        lineNumber:
+          type: integer
+          minimum: 1
+        description:
+          type: string
+        quantity:
+          type: number
+          format: decimal
+        unitPrice:
+          type: number
+          format: decimal
+        taxRate:
+          type: number
+          format: decimal
+        lineTotal:
+          type: number
+          format: decimal
+
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [Created, Voided, PdfGenerated, Corrected]
+        timestamp:
+          type: string
+          format: date-time
+        staffMemberId:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        correlationId:
+          type: string
+          format: uuid
+
+    PaginationMetadata:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - message
+      properties:
+        errorCode:
+          type: string
+          description: Machine-readable error code
+          example: "DUPLICATE_RECEIPT"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invoice is already fully receipted"
+        details:
+          type: object
+          description: Additional error context (optional)
+          nullable: true
